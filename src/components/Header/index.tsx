@@ -8,12 +8,11 @@ export function Header() {
 
   const handleLogout = () => {
     logout(); 
-    navigate("/login"); 
+    navigate("/"); 
   };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-200">
-      {/* Google Material Symbols */}
       <link 
         rel="stylesheet" 
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" 
@@ -21,7 +20,6 @@ export function Header() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          
           {/* Logo - Clicável para voltar ao Início */}
           <div 
             className="flex items-center gap-3 cursor-pointer group" 
@@ -31,14 +29,17 @@ export function Header() {
               <span className="material-symbols-outlined text-[24px]">school</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-bold text-slate-900 leading-tight">IFPB</span>
-              <span className="text-[10px] font-bold text-slate-500 tracking-widest leading-none">SACD</span>
+              <span className="text-base font-bold text-slate-900 leading-tight">
+                IFPB
+              </span>
+              <span className="text-[10px] font-bold text-slate-500 tracking-widest leading-none">
+                SACD
+              </span>
             </div>
           </div>
 
           {/* Ações do Usuário */}
           <div className="flex items-center gap-2">
-            
             {/* Botão Perfil: Mostra a FOTO do Google ou Ícone se não houver */}
             <button 
               onClick={() => navigate("/perfil")} 
@@ -67,10 +68,11 @@ export function Header() {
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
             >
               <span className="hidden sm:inline">Sair</span>
-              <span className="material-symbols-outlined text-[20px]">logout</span>
+              <span className="material-symbols-outlined text-[20px]">
+                logout
+              </span>
             </button>
           </div>
-
         </div>
       </div>
     </header>
