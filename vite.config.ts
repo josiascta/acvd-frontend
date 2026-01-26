@@ -6,7 +6,17 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   server: {
-    port: 3000, // Força o Vite a usar a porta 3000
-    strictPort: true, // Se a porta 3000 estiver ocupada, ele não pula para a 3001
+    port: 3000,
+    strictPort: true,
+    proxy: {
+      // Quando o React chamar "/api/users/me"...
+      '/api': {
+        target: 'http://localhost:8080', // ...o Vite manda para o Java
+        changeOrigin: true,
+        secure: false,
+        // ...e remove o "/api" para o Java receber apenas "/users/me"
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
 });

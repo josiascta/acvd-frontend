@@ -1,33 +1,34 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 export function Header() {
   const navigate = useNavigate();
+  // Pegamos os dados do usuário (session) e a função de sair (logout) do contexto
+  const { session, logout } = useAuth();
 
   const handleLogout = () => {
-    // 1. Limpamos o que foi salvo no Login (token e matrícula temporária)
-    localStorage.removeItem("token");
-    localStorage.removeItem("user_matricula_temp");
-    
-    // Opcional: Limpar qualquer outra chave que você tenha criado
-    // localStorage.removeItem('@SACD:user'); 
-
-    // 2. Redireciona para a tela de login
+    logout(); 
     navigate("/login"); 
   };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-200">
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+      {/* Google Material Symbols */}
+      <link 
+        rel="stylesheet" 
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" 
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* Logo */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="flex items-center justify-center size-8 bg-[#008060]/10 rounded-lg text-[#008060]">
-              <span className="material-symbols-outlined text-[24px]">
-                school
-              </span>
+          {/* Logo - Clicável para voltar ao Início */}
+          <div 
+            className="flex items-center gap-3 cursor-pointer group" 
+            onClick={() => navigate("/")}
+          >
+            <div className="flex items-center justify-center size-8 bg-[#008060]/10 rounded-lg text-[#008060] group-hover:bg-[#008060] group-hover:text-white transition-all">
+              <span className="material-symbols-outlined text-[24px]">school</span>
             </div>
             <div className="flex flex-col">
               <span className="text-base font-bold text-slate-900 leading-tight">IFPB</span>
@@ -35,23 +36,32 @@ export function Header() {
             </div>
           </div>
 
-          {/* Botões de Ação */}
+          {/* Ações do Usuário */}
           <div className="flex items-center gap-2">
             
-            {/* Link para o Perfil */}
+            {/* Botão Perfil: Mostra a FOTO do Google ou Ícone se não houver */}
             <button 
               onClick={() => navigate("/perfil")} 
-              className="flex items-center justify-center size-10 rounded-full text-slate-600 hover:bg-slate-100 hover:text-[#008060] transition-colors" 
+              className="relative flex items-center justify-center size-10 rounded-full border-2 border-transparent hover:border-[#008060] transition-all overflow-hidden bg-slate-100" 
               title="Meu Perfil"
             >
-              <span className="material-symbols-outlined text-[24px]">
-                account_circle
-              </span>
+              {session?.fotoDePerfil ? (
+                <img 
+                  src={session.fotoDePerfil} 
+                  alt="Perfil" 
+                  className="size-full object-cover"
+                />
+              ) : (
+                <span className="material-symbols-outlined text-[26px] text-slate-500">
+                  account_circle
+                </span>
+              )}
             </button>
 
+            {/* Divisor Visual */}
             <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block" />
 
-            {/* Botão Sair */}
+            {/* Botão Sair - Usando a função logout do Contexto */}
             <button 
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"

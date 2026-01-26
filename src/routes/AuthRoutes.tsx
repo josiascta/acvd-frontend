@@ -7,7 +7,7 @@ export function AuthRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
-        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Login />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

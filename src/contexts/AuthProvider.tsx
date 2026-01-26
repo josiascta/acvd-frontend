@@ -25,7 +25,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   //depois terminar e add o setIsLoadingSession
-  const [isLoadingSession] = useState(true);
+  const [isLoadingSession] = useState(false);
+
+  
 
   function logout() {
     localStorage.removeItem("user");
