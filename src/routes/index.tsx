@@ -1,5 +1,5 @@
 import { BrowserRouter } from "react-router-dom";
-//import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/useAuth";
 import { AuthRoutes } from "./AuthRoutes";
 //import { ProfessorRoutes } from "./ProfessorRoutes";
 import { AlunoRoutes } from "./AlunoRoutes";
@@ -21,9 +21,10 @@ function RouteSelector({ role }: RouteSelectorProps) {
 }
 
 export function Routes() {
-  //const { session, isLoadingSession } = useAuth();
+  //add isLoadingSession
+  const { session } = useAuth();
 
-  const role = "ALUNO";
+  const role = session?.role || "";
 
   // if (isLoadingSession) {
   //   return <Loading />;
