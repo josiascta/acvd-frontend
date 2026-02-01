@@ -23,7 +23,18 @@ export function Perfil() {
   }
 
   if (!session) return null;
-
+ const formatarData = (dataString: string | undefined | null) => {
+  // Se for nulo ou indefinido, já retorna o aviso e nem tenta o split
+  if (!dataString) return "Não Informado";
+  
+  try {
+    // Aqui o TS sabe que dataString é obrigatoriamente uma string
+    const dataApenas = dataString.split('T')[0];
+    return new Date(dataApenas + 'T12:00:00').toLocaleDateString('pt-BR');
+  } catch {
+    return "Data Inválida";
+  }
+};
   return (
     <div className="min-h-screen bg-[#f8fcfb] text-slate-900 font-sans antialiased">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -76,19 +87,26 @@ export function Perfil() {
                   <span className="text-slate-700 font-mono font-black text-base">{session.matricula || "Não Informado"}</span>
                 </div>
 
-                <div className="flex flex-col p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">RG</span>
-                  <span className="text-slate-700 font-bold">{"Não Informado"}</span>
-                </div>
+              <div className="flex flex-col p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">RG</span>
+          <span className="text-slate-700 font-bold">{session.numeroRg || "Não Informado"}</span>
+              </div>
 
-                <div className="flex flex-col p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">CPF</span>
-                  <span className="text-slate-700 font-bold">{"Não Informado"}</span>
-                </div>
+              <div className="flex flex-col p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">CPF</span>
+                <span className="text-slate-700 font-bold">{session.numeroCpf || "Não Informado"}</span>
+              </div>
 
-                <div className="flex flex-col p-4 bg-[#008060]/5 rounded-2xl border border-[#008060]/10 sm:col-span-2">
+              <div className="flex flex-col p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Data de Nascimento</span>
+                <span className="text-slate-700 font-bold">
+                  {formatarData(session.dataNascimento)}
+                </span>
+              </div>
+
+                      <div className="flex flex-col p-4 bg-[#008060]/5 rounded-2xl border border-[#008060]/10 sm:col-span-2">
                   <span className="text-[10px] font-black text-[#008060]/60 uppercase tracking-widest mb-1">Curso</span>
-                  <span className="text-[#008060] font-black uppercase tracking-tight">{"Não Informado"}</span>
+                  <span className="text-[#008060] font-black uppercase tracking-tight">{ "Não Informado"}</span>
                 </div>
               </div>
             </div>
