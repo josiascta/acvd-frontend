@@ -7,8 +7,8 @@ type UserResponse = {
   email: string;
   matricula: string;
   role: UserRole;
-  numeroRg?: string;        // Adicionado
-  numeroCpf?: string;       // Adicionado
+  numeroRg?: string;
+  numeroCpf?: string;
   dataNascimento?: string;
   curso?: string;
 };
