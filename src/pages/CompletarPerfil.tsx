@@ -11,20 +11,23 @@ export function CompletarPerfil() {
     cpf: "",
     matricula: "",
     curso: "",
-    dataNascimento: ""
+    dataNascimento: "",
   });
 
   // Validação Matemática de CPF
   const validarCPF = (cpf: string) => {
     const cleanCPF = cpf.replace(/\D/g, "");
     if (cleanCPF.length !== 11 || /^(\d)\1{10}$/.test(cleanCPF)) return false;
-    let soma = 0, resto;
-    for (let i = 1; i <= 9; i++) soma += parseInt(cleanCPF.substring(i - 1, i)) * (11 - i);
+    let soma = 0,
+      resto;
+    for (let i = 1; i <= 9; i++)
+      soma += parseInt(cleanCPF.substring(i - 1, i)) * (11 - i);
     resto = (soma * 10) % 11;
     if (resto === 10 || resto === 11) resto = 0;
     if (resto !== parseInt(cleanCPF.substring(9, 10))) return false;
     soma = 0;
-    for (let i = 1; i <= 10; i++) soma += parseInt(cleanCPF.substring(i - 1, i)) * (12 - i);
+    for (let i = 1; i <= 10; i++)
+      soma += parseInt(cleanCPF.substring(i - 1, i)) * (12 - i);
     resto = (soma * 10) % 11;
     if (resto === 10 || resto === 11) resto = 0;
     if (resto !== parseInt(cleanCPF.substring(10, 11))) return false;
@@ -69,17 +72,21 @@ export function CompletarPerfil() {
         matricula: formData.matricula,
         numeroCpf: formData.cpf.replace(/\D/g, ""),
         numeroRg: formData.rg.replace(/\D/g, ""),
-        dataNascimento: formData.dataNascimento || null
+        dataNascimento: formData.dataNascimento || null,
+        curso: formData.curso,
       };
 
-      const response = await fetch("http://localhost:8080/auth/complete-register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
+      const response = await fetch(
+        "http://localhost:8080/auth/complete-register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      });
+      );
 
       if (!response.ok) {
         throw new Error(await response.text());
@@ -94,13 +101,12 @@ export function CompletarPerfil() {
         numeroRg: payload.numeroRg,
         numeroCpf: payload.numeroCpf,
         dataNascimento: formData.dataNascimento,
-        curso: formData.curso
+        curso: formData.curso,
       };
 
       save(updatedUser);
       alert("Perfil atualizado com sucesso!");
       navigate("/perfil");
-
     } catch (error) {
       console.error("Erro ao salvar:", error);
       alert("Erro ao salvar dados.");
@@ -110,85 +116,117 @@ export function CompletarPerfil() {
   return (
     <div className="min-h-screen bg-[#f8fcfb] flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-8 md:p-10">
-        
         <div className="text-center mb-8">
           <div className="size-16 bg-[#008060]/10 rounded-2xl flex items-center justify-center text-[#008060] mx-auto mb-4">
-            <span className="material-symbols-outlined text-3xl">person_add</span>
+            <span className="material-symbols-outlined text-3xl">
+              person_add
+            </span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Completar Perfil</h1>
-          <p className="text-slate-500 text-sm font-medium mt-2">Dados obrigatórios para o sistema acadêmico.</p>
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
+            Completar Perfil
+          </h1>
+          <p className="text-slate-500 text-sm font-medium mt-2">
+            Dados obrigatórios para o sistema acadêmico.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
-            
             {/* RG */}
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">RG</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                RG
+              </label>
               <input
                 required
                 className="w-full mt-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008060]/20 focus:border-[#008060] transition-all font-bold text-slate-700"
                 placeholder="00.000.000-0"
                 value={formData.rg}
-                onChange={(e) => setFormData({ ...formData, rg: aplicarMascaraRG(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    rg: aplicarMascaraRG(e.target.value),
+                  })
+                }
               />
             </div>
 
             {/* CPF */}
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                CPF
+              </label>
               <input
                 required
                 className="w-full mt-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008060]/20 focus:border-[#008060] transition-all font-bold text-slate-700"
                 placeholder="000.000.000-00"
                 value={formData.cpf}
-                onChange={(e) => setFormData({ ...formData, cpf: aplicarMascaraCPF(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    cpf: aplicarMascaraCPF(e.target.value),
+                  })
+                }
               />
             </div>
 
             {/* Matrícula */}
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nº Matrícula</label>
-              <input 
-                required 
-                className="w-full mt-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008060]/20 focus:border-[#008060] transition-all font-mono font-bold text-slate-700" 
-                placeholder="Ex: 2024101010" 
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Nº Matrícula
+              </label>
+              <input
+                required
+                className="w-full mt-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008060]/20 focus:border-[#008060] transition-all font-mono font-bold text-slate-700"
+                placeholder="Ex: 2024101010"
                 value={formData.matricula}
-                onChange={(e) => setFormData({...formData, matricula: e.target.value})} 
+                onChange={(e) =>
+                  setFormData({ ...formData, matricula: e.target.value })
+                }
               />
             </div>
 
             {/* Data de Nascimento */}
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data de Nascimento</label>
-              <input 
-                required 
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Data de Nascimento
+              </label>
+              <input
+                required
                 type="date"
-                className="w-full mt-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008060]/20 focus:border-[#008060] transition-all font-bold text-slate-700" 
+                className="w-full mt-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008060]/20 focus:border-[#008060] transition-all font-bold text-slate-700"
                 value={formData.dataNascimento}
-                onChange={(e) => setFormData({...formData, dataNascimento: e.target.value})} 
+                onChange={(e) =>
+                  setFormData({ ...formData, dataNascimento: e.target.value })
+                }
               />
             </div>
 
             {/* Curso */}
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Curso</label>
-              <select 
-                required 
-                className="w-full mt-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008060]/20 focus:border-[#008060] transition-all font-bold text-slate-700 appearance-none cursor-pointer" 
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Curso
+              </label>
+              <select
+                required
+                className="w-full mt-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008060]/20 focus:border-[#008060] transition-all font-bold text-slate-700 appearance-none cursor-pointer"
                 value={formData.curso}
-                onChange={(e) => setFormData({...formData, curso: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, curso: e.target.value })
+                }
               >
                 <option value="">Selecione seu curso</option>
-                <option value="Análise e Desenvolvimento de Sistemas">Análise e Desenvolvimento de Sistemas</option>
+                <option value="Análise e Desenvolvimento de Sistemas">
+                  Análise e Desenvolvimento de Sistemas
+                </option>
                 <option value="Engenharia Civil">Engenharia Civil</option>
                 <option value="Música">Música</option>
               </select>
             </div>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="w-full mt-4 py-4 bg-[#008060] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#00664d] transition-all shadow-lg shadow-[#008060]/20 active:scale-[0.98]"
           >
             Finalizar e Salvar
