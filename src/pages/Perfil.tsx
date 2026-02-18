@@ -2,45 +2,29 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
-// Tipagem dos documentos vindos do Backend
+// Tipagem dos documentos de acordo com o novo backend
 interface DocumentoResponseDTO {
   id: string;
   nomeOriginal: string;
-  tipo: string; // "RG", "CPF", "RESIDENCIA"
-  caminhoDoArquivo: string;
+  tamanho: string;
+  hash: string;
+  dataUpload: string;
 }
-
-// Configuração dos tipos de documentos esperados
-const TIPOS_DOCS = {
-  RG: {
-    label: "Identidade (RG)",
-    icon: "badge",
-    description: "Documento de identificação oficial.",
-  },
-  CPF: {
-    label: "CPF",
-    icon: "article",
-    description: "Cadastro de Pessoa Física.",
-  },
-  RESIDENCIA: {
-    label: "Residência",
-    icon: "home",
-    description: "Comprovante de residência atualizado.",
-  },
-};
 
 export function Perfil() {
   const navigate = useNavigate();
   const { session, isLoadingSession } = useAuth();
 
-  // Estados para gerenciar os documentos
-  const [documentos, setDocumentos] = useState<DocumentoResponseDTO[]>([]);
-  const [uploading, setUploading] = useState<string | null>(null); // Controla qual doc está sendo enviado
-  const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  // O backend agora devolve somente um documento principal do usuário
+  const [documento, setDocumento] = useState<DocumentoResponseDTO | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null); // Controla qual doc está sendo enviado ("USER" ou "RESPONSAVEL")
+
+  const fileInputUserRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRespRef = useRef<HTMLInputElement | null>(null);
 
   const API_URL = "http://localhost:8080";
 
-  // Redirecionamento de segurança (mantido da sua versão)
+  // Redirecionamento de segurança
   useEffect(() => {
     if (!isLoadingSession && !session) {
       navigate("/login");
@@ -49,16 +33,16 @@ export function Perfil() {
     }
   }, [isLoadingSession, session, navigate]);
 
-  // Busca documentos assim que a sessão existir
+  // Busca o documento assim que a sessão existir
   useEffect(() => {
     if (session) {
-      fetchDocumentos();
+      fetchDocumento();
     }
   }, [session]);
 
   // --- FUNÇÕES DE INTEGRAÇÃO COM BACKEND ---
 
-  const fetchDocumentos = async () => {
+  const fetchDocumento = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
@@ -70,19 +54,28 @@ export function Perfil() {
 
       if (response.ok) {
         const data = await response.json();
-        setDocumentos(data);
+        if (data && data.id) {
+          setDocumento(data);
+        }
       }
     } catch (error) {
-      console.error("Erro ao buscar documentos:", error);
+      console.error("Erro ao buscar documento:", error);
     }
   };
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
-    tipo: string,
+    tipo: "USER" | "RESPONSAVEL"
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Para o documento do responsável apenas simulamos e esvaziamos o input (conforme pedido)
+    if (tipo === "RESPONSAVEL") {
+      alert("Aviso: Lógica de envio do documento do responsável ainda em desenvolvimento no backend.");
+      if (fileInputRespRef.current) fileInputRespRef.current.value = "";
+      return;
+    }
 
     setUploading(tipo);
     const token = localStorage.getItem("token");
@@ -90,9 +83,9 @@ export function Perfil() {
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("tipo", tipo);
 
     try {
+      // Endpoint alterado, agora só recebe multipart param
       const response = await fetch(`${API_URL}/documentos`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -100,7 +93,7 @@ export function Perfil() {
       });
 
       if (response.ok) {
-        await fetchDocumentos(); // Atualiza a lista
+        await fetchDocumento(); // Atualiza a visualização com o documento salvo
       } else {
         alert("Erro ao enviar o documento. Tente novamente.");
       }
@@ -109,8 +102,8 @@ export function Perfil() {
       alert("Erro de conexão.");
     } finally {
       setUploading(null);
-      if (fileInputRefs.current[tipo]) {
-        fileInputRefs.current[tipo]!.value = ""; // Limpa o input
+      if (fileInputUserRef.current) {
+        fileInputUserRef.current.value = ""; // Limpa o input
       }
     }
   };
@@ -120,7 +113,8 @@ export function Perfil() {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_URL}/documentos/${doc.id}`, {
+      // Modificado para o novo endpoint de download
+      const response = await fetch(`${API_URL}/documentos/${doc.id}/download`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -161,7 +155,7 @@ export function Perfil() {
   return (
     <div className="min-h-screen bg-[#f8fcfb] text-slate-900 font-sans antialiased">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Card Principal de Perfil (Mantido igual ao seu código) */}
+        {/* Card Principal de Perfil */}
         <section className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-xl shadow-slate-200/50 border border-slate-100 p-6 md:p-10">
           <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-[#008060]/5 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -262,7 +256,7 @@ export function Perfil() {
           </div>
         </section>
 
-        {/* Repositório de Documentos Atualizado */}
+        {/* Repositório de Documentos */}
         <section className="space-y-6">
           <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
             <div className="size-2 bg-[#008060] rounded-full"></div>
@@ -271,99 +265,106 @@ export function Perfil() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Loop Dinâmico para RG, CPF, Residência */}
-            {Object.entries(TIPOS_DOCS).map(([key, config]) => {
-              const doc = documentos.find((d) => d.tipo === key);
-              const estaOk = !!doc;
-              const estaEnviando = uploading === key;
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-              // Definição de Cores: Verde (Emerald) se OK, Vermelho (Red) se Pendente
-              const corBase = estaOk ? "emerald" : "red";
-              const classeBorda = estaOk
-                ? "border-emerald-50 shadow-emerald-50/50"
-                : "border-red-50 shadow-red-50/50";
-              const classeIconeBg = estaOk
-                ? "bg-emerald-100 text-emerald-600"
-                : "bg-red-100 text-red-600";
-              const classeBadge = estaOk
-                ? "bg-emerald-100 text-emerald-600"
-                : "bg-red-100 text-red-600";
-              const classeBotao = estaOk
-                ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
-                : "bg-red-600 hover:bg-red-700 shadow-red-100";
-              const bgBlob = estaOk ? "bg-emerald-50/50" : "bg-red-50/50";
+            {/* CARD 1: Documento de Identificação do Usuário */}
+            <div className={`bg-white p-7 rounded-[2rem] border-2 shadow-lg relative overflow-hidden group flex flex-col justify-between min-h-[280px] ${documento ? "border-emerald-50 shadow-emerald-50/50" : "border-red-50 shadow-red-50/50"}`}>
+              <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full -mr-10 -mt-10 ${documento ? "bg-emerald-50/50" : "bg-red-50/50"}`}></div>
 
-              return (
-                <div
-                  key={key}
-                  className={`bg-white p-7 rounded-[2rem] border-2 shadow-lg relative overflow-hidden group flex flex-col justify-between min-h-[280px] ${classeBorda}`}
-                >
-                  <div
-                    className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full -mr-10 -mt-10 ${bgBlob}`}
-                  ></div>
-
-                  <div>
-                    <div className="flex justify-between items-start mb-6 relative">
-                      <span className={`p-3 rounded-2xl ${classeIconeBg}`}>
-                        <span className="material-symbols-outlined text-2xl">
-                          {config.icon}
-                        </span>
-                      </span>
-                      <span
-                        className={`font-black text-[10px] px-3 py-1 rounded-full tracking-widest uppercase ${classeBadge}`}
-                      >
-                        {estaOk ? "Válido" : "Pendente"}
-                      </span>
-                    </div>
-                    <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">
-                      {config.label}
-                    </h3>
-                    <p className="text-xs font-bold text-slate-400 mt-2">
-                      {config.description}
-                    </p>
-                    {estaOk && (
-                      <p
-                        className="text-[10px] text-slate-400 mt-1 truncate"
-                        title={doc.nomeOriginal}
-                      >
-                        Arquivo: {doc.nomeOriginal}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-6">
-                    {estaOk ? (
-                      <button
-                        onClick={() => handleViewDocument(doc)}
-                        className={`w-full py-3 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-colors shadow-md ${classeBotao}`}
-                      >
-                        Visualizar Documento
-                      </button>
-                    ) : (
-                      <>
-                        <input
-                          type="file"
-                          hidden
-                          accept="application/pdf,image/*"
-                          ref={(el) => {
-                            fileInputRefs.current[key] = el;
-                          }}
-                          onChange={(e) => handleFileUpload(e, key)}
-                        />
-                        <button
-                          onClick={() => fileInputRefs.current[key]?.click()}
-                          disabled={!!uploading}
-                          className={`w-full py-3 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-colors shadow-md flex justify-center items-center gap-2 ${classeBotao} ${!!uploading ? "opacity-70 cursor-wait" : ""}`}
-                        >
-                          {estaEnviando ? "Enviando..." : "Enviar Agora"}
-                        </button>
-                      </>
-                    )}
-                  </div>
+              <div>
+                <div className="flex justify-between items-start mb-6 relative">
+                  <span className={`p-3 rounded-2xl ${documento ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"}`}>
+                    <span className="material-symbols-outlined text-2xl">
+                      badge
+                    </span>
+                  </span>
+                  <span className={`font-black text-[10px] px-3 py-1 rounded-full tracking-widest uppercase ${documento ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"}`}>
+                    {documento ? "Válido" : "Pendente"}
+                  </span>
                 </div>
-              );
-            })}
+                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">
+                  Documento de Identificação
+                </h3>
+                <p className="text-xs font-bold text-slate-400 mt-2">
+                  Documento de identificação oficial do usuário (frente e verso).
+                </p>
+                {documento && (
+                  <p className="text-[10px] text-slate-400 mt-1 truncate" title={documento.nomeOriginal}>
+                    Arquivo: {documento.nomeOriginal}
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-6">
+                {documento ? (
+                  <button
+                    onClick={() => handleViewDocument(documento)}
+                    className="w-full py-3 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-colors shadow-md bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
+                  >
+                    Visualizar Documento
+                  </button>
+                ) : (
+                  <>
+                    <input
+                      type="file"
+                      hidden
+                      accept="application/pdf,image/*"
+                      ref={fileInputUserRef}
+                      onChange={(e) => handleFileUpload(e, "USER")}
+                    />
+                    <button
+                      onClick={() => fileInputUserRef.current?.click()}
+                      disabled={uploading === "USER"}
+                      className={`w-full py-3 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-colors shadow-md flex justify-center items-center gap-2 bg-red-600 hover:bg-red-700 shadow-red-100 ${uploading === "USER" ? "opacity-70 cursor-wait" : ""}`}
+                    >
+                      {uploading === "USER" ? "Enviando..." : "Enviar Agora"}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* CARD 2: Documento de Identificação do Responsável */}
+            <div className={`bg-white p-7 rounded-[2rem] border-2 shadow-lg relative overflow-hidden group flex flex-col justify-between min-h-[280px] border-red-50 shadow-red-50/50`}>
+              <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full -mr-10 -mt-10 bg-red-50/50"></div>
+
+              <div>
+                <div className="flex justify-between items-start mb-6 relative">
+                  <span className="p-3 rounded-2xl bg-red-100 text-red-600">
+                    <span className="material-symbols-outlined text-2xl">
+                      supervisor_account
+                    </span>
+                  </span>
+                  <span className="font-black text-[10px] px-3 py-1 rounded-full tracking-widest uppercase bg-red-100 text-red-600">
+                    Pendente
+                  </span>
+                </div>
+                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">
+                  Documento do Responsável
+                </h3>
+                <p className="text-xs font-bold text-slate-400 mt-2">
+                  Documento de identificação oficial do responsável legal.
+                </p>
+              </div>
+
+              <div className="mt-6">
+                <input
+                  type="file"
+                  hidden
+                  accept="application/pdf,image/*"
+                  ref={fileInputRespRef}
+                  onChange={(e) => handleFileUpload(e, "RESPONSAVEL")}
+                />
+                <button
+                  onClick={() => fileInputRespRef.current?.click()}
+                  disabled={uploading === "RESPONSAVEL"}
+                  className={`w-full py-3 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-colors shadow-md flex justify-center items-center gap-2 bg-red-600 hover:bg-red-700 shadow-red-100 ${uploading === "RESPONSAVEL" ? "opacity-70 cursor-wait" : ""}`}
+                >
+                  {uploading === "RESPONSAVEL" ? "Enviando..." : "Enviar Agora"}
+                </button>
+              </div>
+            </div>
+
           </div>
         </section>
       </main>
