@@ -1,4 +1,4 @@
-type UserRole = "PROFESSOR" | "ALUNO";
+type UserRole = "SERVIDOR" | "DISCENTE";
 
 type UserResponse = {
   userId: UUID;

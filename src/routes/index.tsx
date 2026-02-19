@@ -1,8 +1,8 @@
 import { BrowserRouter } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { AuthRoutes } from "./AuthRoutes";
-//import { ProfessorRoutes } from "./ProfessorRoutes";
-import { AlunoRoutes } from "./AlunoRoutes";
+import { ServidorRoutes } from "./ServidorRoutes";
+import { DiscenteRoutes } from "./DiscenteRoutes";
 //import { Loading } from "../components/Loading";
 
 type RouteSelectorProps = {
@@ -11,10 +11,10 @@ type RouteSelectorProps = {
 
 function RouteSelector({ role }: RouteSelectorProps) {
   switch (role) {
-    //case "PROFESSOR":
-    //return <ProfessorRoutes />;
-    case "ALUNO":
-      return <AlunoRoutes />;
+    case "SERVIDOR":
+      return <ServidorRoutes />;
+    case "DISCENTE":
+      return <DiscenteRoutes />;
     default:
       return <AuthRoutes />;
   }

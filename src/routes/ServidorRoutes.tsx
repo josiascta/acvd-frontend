@@ -3,9 +3,9 @@ import { Layout } from "../components/Layout";
 import { NotFound } from "../pages/NotFound";
 import { Home } from "../pages/Home";
 import { Perfil } from "../pages/Perfil";
-import { CompletarPerfil } from "../pages/CompletarPerfil"; 
+import { CompletarPerfil } from "../pages/CompletarPerfil";
 
-export function AlunoRoutes() {
+export function ServidorRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
