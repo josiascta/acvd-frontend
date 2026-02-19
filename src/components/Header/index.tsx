@@ -45,6 +45,7 @@ export function Header() {
                   src={session.fotoDePerfil}
                   alt="Perfil"
                   className="size-full object-cover"
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <span className="material-symbols-outlined text-[26px] text-slate-500">

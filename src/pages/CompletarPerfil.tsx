@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export function CompletarPerfil() {
   const navigate = useNavigate();
   const { save, session } = useAuth();
+
+  const isEditing = !!session?.matricula;
 
   const [formData, setFormData] = useState({
     rg: "",
@@ -14,7 +16,22 @@ export function CompletarPerfil() {
     dataNascimento: "",
   });
 
-  // Validação Matemática de CPF
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (session) {
+      setFormData({
+        rg: session.numeroRg ? aplicarMascaraRG(session.numeroRg) : "",
+        cpf: session.numeroCpf ? aplicarMascaraCPF(session.numeroCpf) : "",
+        matricula: session.matricula || "",
+        curso: session.curso || "",
+        dataNascimento: session.dataNascimento
+          ? session.dataNascimento.split("T")[0]
+          : "",
+      });
+    }
+  }, [session]);
+
   const validarCPF = (cpf: string) => {
     const cleanCPF = cpf.replace(/\D/g, "");
     if (cleanCPF.length !== 11 || /^(\d)\1{10}$/.test(cleanCPF)) return false;
@@ -34,7 +51,6 @@ export function CompletarPerfil() {
     return true;
   };
 
-  // Funções de Máscara Manual
   const aplicarMascaraCPF = (value: string) => {
     return value
       .replace(/\D/g, "")
@@ -65,6 +81,8 @@ export function CompletarPerfil() {
       alert("CPF inválido! Por favor, verifique os números.");
       return;
     }
+
+    setIsLoading(true);
 
     try {
       const payload = {
@@ -105,28 +123,50 @@ export function CompletarPerfil() {
       };
 
       save(updatedUser);
-      alert("Perfil atualizado com sucesso!");
+      alert(
+        isEditing
+          ? "Perfil atualizado com sucesso!"
+          : "Perfil completado com sucesso!",
+      );
       navigate("/perfil");
     } catch (error) {
       console.error("Erro ao salvar:", error);
       alert("Erro ao salvar dados.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#f8fcfb] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-8 md:p-10">
+      <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-slate-100 p-8 md:p-10 relative">
+        {isEditing && (
+          <button
+            type="button"
+            onClick={() => navigate("/perfil")}
+            className="absolute top-6 left-6 text-slate-400 hover:text-[#008060] transition-colors"
+            title="Voltar para o perfil"
+            aria-label="Voltar para o perfil"
+          >
+            <span className="material-symbols-outlined text-2xl">
+              arrow_back
+            </span>
+          </button>
+        )}
+
         <div className="text-center mb-8">
           <div className="size-16 bg-[#008060]/10 rounded-2xl flex items-center justify-center text-[#008060] mx-auto mb-4">
             <span className="material-symbols-outlined text-3xl">
-              person_add
+              {isEditing ? "manage_accounts" : "person_add"}
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-            Completar Perfil
+            {isEditing ? "Editar Perfil" : "Completar Perfil"}
           </h1>
           <p className="text-slate-500 text-sm font-medium mt-2">
-            Dados obrigatórios para o sistema acadêmico.
+            {isEditing
+              ? "Mantenha seus dados acadêmicos sempre atualizados."
+              : "Dados obrigatórios para o sistema acadêmico."}
           </p>
         </div>
 
@@ -170,7 +210,7 @@ export function CompletarPerfil() {
               />
             </div>
 
-            {/* Matrícula */}
+            {/* Matrícula - Edição Liberada */}
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                 Nº Matrícula
@@ -227,9 +267,14 @@ export function CompletarPerfil() {
 
           <button
             type="submit"
-            className="w-full mt-4 py-4 bg-[#008060] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#00664d] transition-all shadow-lg shadow-[#008060]/20 active:scale-[0.98]"
+            disabled={isLoading}
+            className="w-full mt-4 py-4 bg-[#008060] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#00664d] transition-all shadow-lg shadow-[#008060]/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-wait"
           >
-            Finalizar e Salvar
+            {isLoading
+              ? "Salvando..."
+              : isEditing
+                ? "Salvar Alterações"
+                : "Finalizar e Salvar"}
           </button>
         </form>
       </div>
