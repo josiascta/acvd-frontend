@@ -12,6 +12,7 @@ export function CompletarPerfil() {
     rg: "",
     cpf: "",
     matricula: "",
+    telefone: "",
     curso: "",
     dataNascimento: "",
   });
@@ -24,6 +25,7 @@ export function CompletarPerfil() {
         rg: session.numeroRg ? aplicarMascaraRG(session.numeroRg) : "",
         cpf: session.numeroCpf ? aplicarMascaraCPF(session.numeroCpf) : "",
         matricula: session.matricula || "",
+        telefone: session.telefone || "",
         curso: session.curso || "",
         dataNascimento: session.dataNascimento
           ? session.dataNascimento.split("T")[0]
@@ -88,6 +90,7 @@ export function CompletarPerfil() {
       const payload = {
         email: session.email,
         matricula: formData.matricula,
+        telefone: formData.telefone,
         numeroCpf: formData.cpf.replace(/\D/g, ""),
         numeroRg: formData.rg.replace(/\D/g, ""),
         dataNascimento: formData.dataNascimento || null,
@@ -116,6 +119,7 @@ export function CompletarPerfil() {
       const updatedUser = {
         ...session,
         matricula: formData.matricula,
+        telefone: formData.telefone,
         numeroRg: payload.numeroRg,
         numeroCpf: payload.numeroCpf,
         dataNascimento: formData.dataNascimento,
@@ -222,6 +226,21 @@ export function CompletarPerfil() {
                 value={formData.matricula}
                 onChange={(e) =>
                   setFormData({ ...formData, matricula: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Telefone
+              </label>
+              <input
+                required
+                className="w-full mt-1 px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#008060]/20 focus:border-[#008060] transition-all font-mono font-bold text-slate-700"
+                placeholder="Ex: 83998952123"
+                value={formData.telefone}
+                onChange={(e) =>
+                  setFormData({ ...formData, telefone: e.target.value })
                 }
               />
             </div>

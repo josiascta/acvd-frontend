@@ -6,6 +6,7 @@ type UserResponse = {
   fotoDePerfil: string;
   email: string;
   matricula: string;
+  telefone: string;
   role: UserRole;
   numeroRg?: string;
   numeroCpf?: string;

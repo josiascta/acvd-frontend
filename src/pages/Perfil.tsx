@@ -28,7 +28,6 @@ interface ResponsavelLegalDTO {
   documento?: DocumentoResponseDTO;
 }
 
-// --- FUNÇÃO AUXILIAR ---
 function isMenorDeIdade(dataNascimento?: string): boolean {
   if (!dataNascimento) return false;
   const birthDate = new Date(dataNascimento);
@@ -322,9 +321,6 @@ export function Perfil() {
                   </span>
                 )}
               </div>
-              <div className="absolute bottom-1 right-1 size-9 bg-white rounded-full shadow-md flex items-center justify-center text-slate-400 group-hover:text-[#008060] transition-colors border border-slate-100">
-                <span className="material-symbols-outlined text-xl">edit</span>
-              </div>
             </div>
 
             {/* Dados do Usuário */}
@@ -383,6 +379,14 @@ export function Perfil() {
                   </span>
                   <span className="text-slate-700 font-bold">
                     {formatarData(session.dataNascimento)}
+                  </span>
+                </div>
+                <div className="flex flex-col p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                    Telefone
+                  </span>
+                  <span className="text-slate-700 font-bold">
+                    {session.telefone || "Não informado"}
                   </span>
                 </div>
                 <div className="flex flex-col p-4 bg-[#008060]/5 rounded-2xl border border-[#008060]/10 sm:col-span-2">
