@@ -56,35 +56,50 @@ const validarCPFMath = (cpf: string) => {
   return true;
 };
 
-const perfilSchema = z.object({
-  rg: z.string().min(4, "RG inválido (mínimo 4 dígitos)"),
-  cpf: z
-    .string()
-    .regex(
-      /^\d{3}\.\d{3}\.\d{3}-\d{2}$/,
-      "CPF incompleto. Digite os 11 números.",
-    )
-    .refine((val) => validarCPFMath(val), {
-      message: "CPF inválido! Verifique os números.",
-    }),
-  matricula: z.string().min(4, "A matrícula é obrigatória."),
-  telefone: z
-    .string()
-    .regex(
-      /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
-      "Telefone incompleto. Digite o DDD e o número.",
-    ),
-  dataNascimento: z.string().min(1, "A data de nascimento é obrigatória."),
-  curso: z.string().min(1, "Por favor, selecione um curso."),
-});
+// Transformado em função para lidar com os campos opcionais
+const getPerfilSchema = (isDiscente: boolean) => {
+  const baseSchema = z.object({
+    rg: z.string().min(4, "RG inválido (mínimo 4 dígitos)"),
+    cpf: z
+      .string()
+      .regex(
+        /^\d{3}\.\d{3}\.\d{3}-\d{2}$/,
+        "CPF incompleto. Digite os 11 números.",
+      )
+      .refine((val) => validarCPFMath(val), {
+        message: "CPF inválido! Verifique os números.",
+      }),
+    matricula: z.string().min(4, "A matrícula é obrigatória."),
+  });
 
-type PerfilFormData = z.infer<typeof perfilSchema>;
+  if (isDiscente) {
+    return baseSchema.extend({
+      telefone: z
+        .string()
+        .regex(
+          /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
+          "Telefone incompleto. Digite o DDD e o número.",
+        ),
+      dataNascimento: z.string().min(1, "A data de nascimento é obrigatória."),
+      curso: z.string().min(1, "Por favor, selecione um curso."),
+    });
+  }
+
+  return baseSchema.extend({
+    telefone: z.string().optional(),
+    dataNascimento: z.string().optional(),
+    curso: z.string().optional(),
+  });
+};
+
+type PerfilFormData = z.infer<ReturnType<typeof getPerfilSchema>>;
 
 export function CompletarPerfil() {
   const navigate = useNavigate();
   const { save, session } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
+  const isDiscente: boolean = session?.role === "DISCENTE";
   const isEditing = !!session?.matricula;
 
   const {
@@ -93,7 +108,7 @@ export function CompletarPerfil() {
     reset,
     formState: { errors },
   } = useForm<PerfilFormData>({
-    resolver: zodResolver(perfilSchema),
+    resolver: zodResolver(getPerfilSchema(isDiscente)), // Chamada dinâmica aqui
   });
 
   useEffect(() => {
@@ -125,11 +140,11 @@ export function CompletarPerfil() {
       const payload = {
         email: session.email,
         matricula: data.matricula,
-        telefone: data.telefone.replace(/\D/g, ""),
+        telefone: data.telefone ? data.telefone.replace(/\D/g, "") : "", // Proteção contra undefined
         numeroCpf: data.cpf.replace(/\D/g, ""),
         numeroRg: data.rg.replace(/\D/g, ""),
         dataNascimento: data.dataNascimento || null,
-        curso: data.curso,
+        curso: data.curso || null,
       };
 
       const response = await fetch(
@@ -238,42 +253,48 @@ export function CompletarPerfil() {
             />
 
             <InputForm
-              label="Nº Matrícula"
+              label={isDiscente ? "Matrícula" : "SIAPE"}
               placeholder="Ex: 2024101010"
               fontMono
               error={errors.matricula?.message}
               {...register("matricula")}
             />
 
-            <InputForm
-              label="Telefone"
-              placeholder="(00) 00000-0000"
-              fontMono
-              error={errors.telefone?.message}
-              {...telefoneReg}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                e.target.value = aplicarMascaraTelefone(e.target.value);
-                telefoneReg.onChange(e);
-              }}
-            />
+            {isDiscente && (
+              <InputForm
+                label="Telefone"
+                placeholder="(00) 00000-0000"
+                fontMono
+                error={errors.telefone?.message}
+                {...telefoneReg}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  e.target.value = aplicarMascaraTelefone(e.target.value);
+                  telefoneReg.onChange(e);
+                }}
+              />
+            )}
 
-            <InputForm
-              type="date"
-              label="Data de Nascimento"
-              error={errors.dataNascimento?.message}
-              {...register("dataNascimento")}
-            />
+            {isDiscente && (
+              <InputForm
+                type="date"
+                label="Data de Nascimento"
+                error={errors.dataNascimento?.message}
+                {...register("dataNascimento")}
+              />
+            )}
 
-            <SelectForm
-              label="Curso"
-              error={errors.curso?.message}
-              options={[
-                "Análise e Desenvolvimento de Sistemas",
-                "Engenharia Civil",
-                "Música",
-              ]}
-              {...register("curso")}
-            />
+            {isDiscente && (
+              <SelectForm
+                label="Curso"
+                error={errors.curso?.message}
+                options={[
+                  "Análise e Desenvolvimento de Sistemas",
+                  "Engenharia Civil",
+                  "Música",
+                ]}
+                {...register("curso")}
+              />
+            )}
           </div>
 
           <button

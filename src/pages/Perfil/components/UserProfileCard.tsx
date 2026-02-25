@@ -69,7 +69,7 @@ export function UserProfileCard({ session }: UserProfileCardProps) {
             {/* Componentizei visualmente os blocos de informação apenas com o map mental, mas mantive a estrutura */}
             <InfoBlock label="E-mail Acadêmico" value={session.email} />
             <InfoBlock
-              label="Nº Matrícula"
+              label={session.role === "SERVIDOR" ? "SIAPE" : "Matrícula"}
               value={session.matricula || "Não Informado"}
               isMono
             />
@@ -78,77 +78,85 @@ export function UserProfileCard({ session }: UserProfileCardProps) {
               label="CPF"
               value={session.numeroCpf || "Não Informado"}
             />
-            <InfoBlock
-              label="Data de Nascimento"
-              value={formatarData(session.dataNascimento)}
-            />
-            <InfoBlock
-              label="Telefone"
-              value={session.telefone || "Não informado"}
-            />
+            {session.role === "DISCENTE" && (
+              <InfoBlock
+                label="Data de Nascimento"
+                value={formatarData(session.dataNascimento)}
+              />
+            )}
+            {session.role === "DISCENTE" && (
+              <InfoBlock
+                label="Telefone"
+                value={session.telefone || "Não informado"}
+              />
+            )}
 
-            <div className="flex flex-col p-4 bg-[#008060]/5 rounded-2xl border border-[#008060]/10 sm:col-span-2">
-              <span className="text-[10px] font-black text-[#008060]/60 uppercase tracking-widest mb-1">
-                Curso
-              </span>
-              <span className="text-[#008060] font-black uppercase tracking-tight">
-                {session.curso || "Não Informado"}
-              </span>
-            </div>
+            {session.role === "DISCENTE" && (
+              <div className="flex flex-col p-4 bg-[#008060]/5 rounded-2xl border border-[#008060]/10 sm:col-span-2">
+                <span className="text-[10px] font-black text-[#008060]/60 uppercase tracking-widest mb-1">
+                  Curso
+                </span>
+                <span className="text-[#008060] font-black uppercase tracking-tight">
+                  {session.curso || "Não Informado"}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Documento Embutido */}
-          <div
-            className={`mt-6 p-5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors ${documentoUser ? "bg-emerald-50/50 border-emerald-100" : "bg-orange-50/50 border-orange-100"}`}
-          >
-            <div className="flex items-center gap-4 w-full sm:w-auto">
-              <div
-                className={`p-3 rounded-xl flex-shrink-0 ${documentoUser ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-600"}`}
-              >
-                <span className="material-symbols-outlined">
-                  {documentoUser ? "check_circle" : "warning"}
-                </span>
-              </div>
-              <div>
-                <h3 className="font-black text-sm text-slate-800 uppercase tracking-tight">
-                  Documento Oficial (Frente/Verso)
-                </h3>
-                <p className="text-xs font-medium text-slate-500">
-                  {documentoUser
-                    ? documentoUser.nomeOriginal
-                    : "Nenhum documento anexado."}
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full sm:w-auto flex-shrink-0">
-              {documentoUser ? (
-                <button
-                  onClick={() => handleViewDocument(documentoUser.id)}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-colors shadow-md shadow-emerald-600/20"
+          {session.role === "DISCENTE" && (
+            <div
+              className={`mt-6 p-5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors ${documentoUser ? "bg-emerald-50/50 border-emerald-100" : "bg-orange-50/50 border-orange-100"}`}
+            >
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <div
+                  className={`p-3 rounded-xl flex-shrink-0 ${documentoUser ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-600"}`}
                 >
-                  Visualizar
-                </button>
-              ) : (
-                <>
-                  <input
-                    type="file"
-                    hidden
-                    accept="application/pdf,image/*"
-                    ref={fileInputUserRef}
-                    onChange={onFileChange}
-                  />
+                  <span className="material-symbols-outlined">
+                    {documentoUser ? "check_circle" : "warning"}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-slate-800 uppercase tracking-tight">
+                    Documento Oficial (Frente/Verso)
+                  </h3>
+                  <p className="text-xs font-medium text-slate-500">
+                    {documentoUser
+                      ? documentoUser.nomeOriginal
+                      : "Nenhum documento anexado."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-full sm:w-auto flex-shrink-0">
+                {documentoUser ? (
                   <button
-                    onClick={() => fileInputUserRef.current?.click()}
-                    disabled={uploadingUserDoc}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-colors shadow-md shadow-orange-600/20 disabled:opacity-50"
+                    onClick={() => handleViewDocument(documentoUser.id)}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-colors shadow-md shadow-emerald-600/20"
                   >
-                    {uploadingUserDoc ? "Enviando..." : "Anexar Documento"}
+                    Visualizar
                   </button>
-                </>
-              )}
+                ) : (
+                  <>
+                    <input
+                      type="file"
+                      hidden
+                      accept="application/pdf,image/*"
+                      ref={fileInputUserRef}
+                      onChange={onFileChange}
+                    />
+                    <button
+                      onClick={() => fileInputUserRef.current?.click()}
+                      disabled={uploadingUserDoc}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-colors shadow-md shadow-orange-600/20 disabled:opacity-50"
+                    >
+                      {uploadingUserDoc ? "Enviando..." : "Anexar Documento"}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </section>
