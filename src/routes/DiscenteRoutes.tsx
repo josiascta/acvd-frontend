@@ -4,6 +4,7 @@ import { NotFound } from "../pages/NotFound";
 import { Home } from "../pages/Home";
 import { Perfil } from "../pages/Perfil";
 import { CompletarPerfil } from "../pages/CompletarPerfil";
+import { SolicitacaoIndividual } from "../pages/SolicitacaoIndividual";
 
 export function DiscenteRoutes() {
   return (
@@ -12,6 +13,10 @@ export function DiscenteRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/completar-perfil" element={<CompletarPerfil />} />
+        <Route
+          path="/solicitacao-individual"
+          element={<SolicitacaoIndividual />}
+        />
       </Route>
 
       <Route path="*" element={<NotFound />} />

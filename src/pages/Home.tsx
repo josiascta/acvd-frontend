@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TripCard } from "../components/TripCard";
 import { FabButton } from "../components/FabButton";
+import { useNavigate } from "react-router-dom";
 
 // MOCK: Adequado ao novo ViagemDTO
 const MOCK_VIAGENS: ViagemDTO[] = [
@@ -68,6 +69,7 @@ const MOCK_VIAGENS: ViagemDTO[] = [
 
 export function Home() {
   const [busca, setBusca] = useState<string>("");
+  const navigate = useNavigate();
 
   // Lógica de filtro baseada no texto digitado (Busca pelo localFinal)
   const viagensFiltradas = MOCK_VIAGENS.filter((viagem) => {
@@ -134,7 +136,7 @@ export function Home() {
       <FabButton
         label="Nova Viagem"
         icon="add"
-        onClick={() => console.log("Navegar para formulário")}
+        onClick={() => navigate("/solicitacao-individual")}
       />
     </div>
   );
