@@ -4,6 +4,8 @@ import { NotFound } from "../pages/NotFound";
 import { Home } from "../pages/Home";
 import { Perfil } from "../pages/Perfil";
 import { CompletarPerfil } from "../pages/CompletarPerfil";
+import { NovaViagemColetiva } from "../pages/NovaViagemColetiva";
+import { DetalhesViagem } from "../pages/DetalhesViagem";
 
 export function ServidorRoutes() {
   return (
@@ -12,6 +14,8 @@ export function ServidorRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/completar-perfil" element={<CompletarPerfil />} />
+        <Route path="/nova-viagem-coletiva" element={<NovaViagemColetiva />} />
+        <Route path="/viagem/:id" element={<DetalhesViagem />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

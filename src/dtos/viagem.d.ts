@@ -14,5 +14,6 @@ type ViagemDTO = {
   prazoAnexosDiscentes: string; // LocalDate
   valorDiariaCnpq: number; // Float
   tipoViagem: TipoViagem;
+  nomeResponsavel?: string;
   itinerarios: ItinerarioDTO[];
 };

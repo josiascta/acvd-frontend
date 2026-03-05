@@ -1,5 +1,6 @@
 interface TripCardProps {
   trip: ViagemDTO;
+  // Removi o nomeResponsavel daqui, pois agora vem dentro de 'trip'
   onClick?: () => void;
 }
 
@@ -20,10 +21,10 @@ export function TripCard({ trip, onClick }: TripCardProps) {
       ? trip.itinerarios[trip.itinerarios.length - 1].local
       : "Destino a definir";
 
-  // Lógica para descobrir o status da documentação dinamicamente (baseado no prazo)
+  // Lógica para descobrir o status da documentação dinamicamente
   const dataAtual = new Date();
   const prazoAnexos = new Date(trip.prazoAnexosDiscentes);
-  const isDocPendente = prazoAnexos >= dataAtual; // Se o prazo ainda não venceu, está pendente
+  const isDocPendente = prazoAnexos >= dataAtual;
 
   return (
     <article
@@ -34,7 +35,7 @@ export function TripCard({ trip, onClick }: TripCardProps) {
         {/* Header do Card */}
         <div className="flex justify-between items-start mb-6">
           <div className="space-y-1.5 text-left flex-1 min-w-0 pr-3">
-            {/* Título com Truncate (...) */}
+            {/* Título */}
             <h3
               title={localFinal}
               className="text-lg font-bold text-slate-900 leading-tight group-hover:text-[#008060] transition-colors truncate"
@@ -42,21 +43,32 @@ export function TripCard({ trip, onClick }: TripCardProps) {
               {localFinal}
             </h3>
 
+            {/* Tipo de Viagem (Tag) */}
+            <div className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit">
+              <span className="material-symbols-outlined text-[14px]">
+                {trip.tipoViagem === "COLETIVA" ? "groups" : "person"}
+              </span>
+              {trip.tipoViagem}
+            </div>
+
             {/* Data */}
-            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 pt-1">
               <span className="material-symbols-outlined text-[16px]">
                 calendar_month
               </span>
               {formatDate(trip.dataPartida)} - {formatDate(trip.dataRetorno)}
             </div>
 
-            {/* Local da Cidade / Destino Final embaixo da data */}
+            {/* Responsável da Viagem lendo direto do trip */}
             <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
               <span className="material-symbols-outlined text-[16px]">
-                location_on
+                badge
               </span>
-              <span className="truncate" title={localFinal}>
-                {localFinal}
+              <span
+                className="truncate"
+                title={`Responsável: ${trip.nomeResponsavel || "Não informado"}`}
+              >
+                Responsável: {trip.nomeResponsavel || "Não informado"}
               </span>
             </div>
           </div>
@@ -66,8 +78,8 @@ export function TripCard({ trip, onClick }: TripCardProps) {
             className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border transition-colors whitespace-nowrap shrink-0
             ${
               isDocPendente
-                ? "bg-amber-50 text-amber-700 border-amber-200" // Amarelo para Pendente
-                : "bg-[#008060]/10 text-[#008060] border-[#008060]/20" // Verde para Aprovada
+                ? "bg-amber-50 text-amber-700 border-amber-200"
+                : "bg-[#008060]/10 text-[#008060] border-[#008060]/20"
             }`}
           >
             {isDocPendente ? "Doc Pendente" : "Doc Aprovada"}

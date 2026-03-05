@@ -1,105 +1,116 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { TripCard } from "../components/TripCard";
 import { FabButton } from "../components/FabButton";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { API_URL, getHeaders } from "../utils/api";
 
-// MOCK: Adequado ao novo ViagemDTO
-const MOCK_VIAGENS: ViagemDTO[] = [
-  {
-    id: "1",
-    dataPartida: "2024-10-12T08:00:00",
-    dataRetorno: "2024-10-14T18:00:00",
-    prazoAnexosDiscentes: "2023-10-10", // Data antiga = Doc Aprovada
-    valorDiariaCnpq: 320.5,
-    tipoViagem: "COLETIVA",
-    itinerarios: [
-      {
-        id: "it1",
-        horarioEntrada: "2024-10-12T09:00:00",
-        horarioSaida: "2024-10-12T12:00:00",
-        local: "Campus IFPB - João Pessoa",
-      },
-      {
-        id: "it2",
-        horarioEntrada: "2024-10-12T14:00:00",
-        horarioSaida: "2024-10-14T16:00:00",
-        local: "Porto Digital",
-      },
-    ],
-  },
-  {
-    id: "2",
-    dataPartida: "2024-11-20T07:00:00",
-    dataRetorno: "2024-11-20T19:00:00",
-    prazoAnexosDiscentes: "2025-11-15", // Data no futuro = Doc Pendente
-    valorDiariaCnpq: 150.0,
-    tipoViagem: "COLETIVA",
-    itinerarios: [
-      {
-        id: "it3",
-        horarioEntrada: "2024-11-20T09:00:00",
-        horarioSaida: "2024-11-20T11:00:00",
-        local: "Fazenda Experimental",
-      },
-      {
-        id: "it4",
-        horarioEntrada: "2024-11-20T13:00:00",
-        horarioSaida: "2024-11-20T17:00:00",
-        local: "Embrapa",
-      },
-    ],
-  },
-  {
-    id: "3",
-    dataPartida: "2025-12-05T06:00:00",
-    dataRetorno: "2025-12-07T22:00:00",
-    prazoAnexosDiscentes: "2025-12-01", // Data no futuro = Doc Pendente
-    valorDiariaCnpq: 500.0,
-    tipoViagem: "INDIVIDUAL",
-    itinerarios: [
-      {
-        id: "it5",
-        horarioEntrada: "2025-12-05T14:00:00",
-        horarioSaida: "2025-12-07T18:00:00",
-        local: "Centro de Convenções",
-      },
-    ],
-  },
-];
+// Criamos um tipo unificado para a tela Home
+type HomeItem = {
+  viagem: ViagemDTO;
+  requisicaoId?: string; // Estará presente apenas se for Discente
+};
 
 export function Home() {
+  const [items, setItems] = useState<HomeItem[]>([]);
   const [busca, setBusca] = useState<string>("");
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [erro, setErro] = useState<string | null>(null);
 
-  // Lógica de filtro baseada no texto digitado (Busca pelo localFinal)
-  const viagensFiltradas = MOCK_VIAGENS.filter((viagem) => {
+  const navigate = useNavigate();
+  const { session } = useAuth();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        if (session?.role === "SERVIDOR") {
+          // Lógica do Servidor: Busca as próprias viagens
+          const res = await fetch(`${API_URL}/viagens/minhas`, {
+            headers: getHeaders(),
+          });
+          if (!res.ok) throw new Error("Falha ao buscar viagens");
+
+          const data: ViagemDTO[] = await res.json();
+          setItems(data.map((v) => ({ viagem: v })));
+        } else if (session?.role === "DISCENTE") {
+          // Lógica do Discente: Busca as requisições vinculadas a ele
+          const res = await fetch(`${API_URL}/requisicoes/minhas`, {
+            headers: getHeaders(),
+          });
+          if (!res.ok) throw new Error("Falha ao buscar requisições");
+
+          const reqs: RequisicaoResumoDTO[] = await res.json();
+
+          // Como o TripCard precisa dos dados da Viagem, fazemos as requisições das viagens vinculadas
+          const itemsPromises = reqs.map(async (req) => {
+            const vRes = await fetch(`${API_URL}/viagens/${req.viagemId}`, {
+              headers: getHeaders(),
+            });
+            const viagemData: ViagemDTO = await vRes.json();
+            return { viagem: viagemData, requisicaoId: req.id };
+          });
+
+          const combinedItems = await Promise.all(itemsPromises);
+          setItems(combinedItems);
+        }
+      } catch (err: any) {
+        setErro(
+          "Não foi possível carregar os dados. Tente novamente mais tarde.",
+        );
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (session?.role) {
+      fetchData();
+    }
+  }, [session?.role]);
+
+  const itemsFiltrados = items.filter((item) => {
     if (busca.trim() === "") return true;
 
     const localFinal =
-      viagem.itinerarios.length > 0
-        ? viagem.itinerarios[viagem.itinerarios.length - 1].local
+      item.viagem.itinerarios.length > 0
+        ? item.viagem.itinerarios[item.viagem.itinerarios.length - 1].local
         : "";
 
-    // Converte os dois para minúsculo para a busca ignorar letras maiúsculas/minúsculas
     return localFinal.toLowerCase().includes(busca.toLowerCase());
   });
+
+  const handleNovaViagemClick = () => {
+    if (session?.role === "SERVIDOR") {
+      navigate("/nova-viagem-coletiva");
+    } else {
+      navigate("/solicitacao-individual");
+    }
+  };
+
+  const handleCardClick = (item: HomeItem) => {
+    if (session?.role === "SERVIDOR") {
+      navigate(`/viagem/${item.viagem.id}`); // Tela de detalhes do servidor
+    } else {
+      navigate(`/minha-requisicao/${item.requisicaoId}`); // Nova tela do discente
+    }
+  };
 
   return (
     <div className="flex-grow w-full bg-[#f9fafb] min-h-[calc(100vh-64px)] pb-12">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Cabeçalho da Seção */}
+        {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2">
           <div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">
               Minhas Viagens
             </h2>
             <p className="text-slate-500 text-sm max-w-2xl">
-              Acompanhe suas solicitações de viagens, roteiros e prazos de
-              anexos.
+              Acompanhe suas solicitações de viagens, roteiros e prazos.
             </p>
           </div>
 
-          {/* Campo de Busca (Input) */}
           <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm w-full md:max-w-xs transition-colors focus-within:border-[#008060] focus-within:ring-1 focus-within:ring-[#008060]">
             <span className="material-symbols-outlined text-slate-400 text-[20px]">
               search
@@ -114,29 +125,45 @@ export function Home() {
           </div>
         </div>
 
-        {/* Grid de Viagens usando a constante 'viagensFiltradas' */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {viagensFiltradas.length > 0 ? (
-            viagensFiltradas.map((viagem) => (
-              <TripCard
-                key={viagem.id}
-                trip={viagem}
-                onClick={() => console.log(`Clicou na viagem: ${viagem.id}`)}
-              />
-            ))
-          ) : (
-            <div className="col-span-full py-12 text-center text-slate-500 font-medium border-2 border-dashed border-slate-200 rounded-2xl">
-              Nenhuma viagem encontrada com o destino "{busca}".
-            </div>
-          )}
-        </div>
+        {/* Listagem / Loading / Erros */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+            <span className="material-symbols-outlined animate-spin text-4xl mb-4 text-[#008060]">
+              progress_activity
+            </span>
+            <p className="font-medium">Carregando viagens...</p>
+          </div>
+        ) : erro ? (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-xl text-center">
+            <span className="material-symbols-outlined text-3xl mb-2">
+              error
+            </span>
+            <p className="font-medium">{erro}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {itemsFiltrados.length > 0 ? (
+              itemsFiltrados.map((item) => (
+                <TripCard
+                  key={item.requisicaoId || item.viagem.id}
+                  trip={item.viagem} // Reaproveita o mesmo componente sem mexer nele!
+                  onClick={() => handleCardClick(item)}
+                />
+              ))
+            ) : (
+              <div className="col-span-full py-12 text-center text-slate-500 font-medium border-2 border-dashed border-slate-200 rounded-2xl">
+                Nenhuma viagem encontrada.
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Botão Flutuante (FAB) */}
       <FabButton
         label="Nova Viagem"
         icon="add"
-        onClick={() => navigate("/solicitacao-individual")}
+        onClick={handleNovaViagemClick}
       />
     </div>
   );
