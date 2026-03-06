@@ -4,11 +4,15 @@ import { TripCard } from "../components/TripCard";
 import { FabButton } from "../components/FabButton";
 import { useAuth } from "../hooks/useAuth";
 import { API_URL, getHeaders } from "../utils/api";
+// Importar tipos conforme a organização do seu projeto
+// import { ViagemDTO } from "../dtos/viagem";
+// import { RequisicaoResumoDTO } from "../dtos/requisicao";
 
-// Criamos um tipo unificado para a tela Home
+// Adicionamos a propriedade `status` ao tipo base
 type HomeItem = {
   viagem: ViagemDTO;
-  requisicaoId?: string; // Estará presente apenas se for Discente
+  requisicaoId?: string;
+  status?: string; // <-- NOVO
 };
 
 export function Home() {
@@ -33,6 +37,7 @@ export function Home() {
           if (!res.ok) throw new Error("Falha ao buscar viagens");
 
           const data: ViagemDTO[] = await res.json();
+          // Servidor não envia 'status' para a HomeItem
           setItems(data.map((v) => ({ viagem: v })));
         } else if (session?.role === "DISCENTE") {
           // Lógica do Discente: Busca as requisições vinculadas a ele
@@ -43,13 +48,17 @@ export function Home() {
 
           const reqs: RequisicaoResumoDTO[] = await res.json();
 
-          // Como o TripCard precisa dos dados da Viagem, fazemos as requisições das viagens vinculadas
+          // Faz o fetch dos dados da viagem e anexa o req.status no HomeItem
           const itemsPromises = reqs.map(async (req) => {
             const vRes = await fetch(`${API_URL}/viagens/${req.viagemId}`, {
               headers: getHeaders(),
             });
             const viagemData: ViagemDTO = await vRes.json();
-            return { viagem: viagemData, requisicaoId: req.id };
+            return {
+              viagem: viagemData,
+              requisicaoId: req.id,
+              status: req.status, // <-- INJETAMOS O STATUS AQUI
+            };
           });
 
           const combinedItems = await Promise.all(itemsPromises);
@@ -91,9 +100,9 @@ export function Home() {
 
   const handleCardClick = (item: HomeItem) => {
     if (session?.role === "SERVIDOR") {
-      navigate(`/viagem/${item.viagem.id}`); // Tela de detalhes do servidor
+      navigate(`/viagem/${item.viagem.id}`);
     } else {
-      navigate(`/minha-requisicao/${item.requisicaoId}`); // Nova tela do discente
+      navigate(`/minha-requisicao/${item.requisicaoId}`);
     }
   };
 
@@ -146,7 +155,8 @@ export function Home() {
               itemsFiltrados.map((item) => (
                 <TripCard
                   key={item.requisicaoId || item.viagem.id}
-                  trip={item.viagem} // Reaproveita o mesmo componente sem mexer nele!
+                  trip={item.viagem}
+                  statusRequisicao={item.status} // <-- Repassando o status para o card
                   onClick={() => handleCardClick(item)}
                 />
               ))

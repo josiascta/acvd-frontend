@@ -8,7 +8,6 @@ export function MinhaRequisicao() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  // Usamos o tipo Resumo pois pegaremos da lista de /minhas
   const [requisicao, setRequisicao] = useState<RequisicaoResumoDTO | null>(
     null,
   );
@@ -16,7 +15,6 @@ export function MinhaRequisicao() {
   useEffect(() => {
     const fetchMinhaRequisicao = async () => {
       try {
-        // Aluno não pode acessar /detalhes, então buscamos em /minhas e filtramos pelo ID da URL
         const res = await fetch(`${API_URL}/requisicoes/minhas`, {
           headers: getHeaders(),
         });
@@ -31,7 +29,7 @@ export function MinhaRequisicao() {
           }
         }
       } catch (err) {
-        console.error("Erro ao buscar a requisição", err);
+        console.error("Erro ao procurar a requisição", err);
       } finally {
         setLoading(false);
       }
@@ -48,12 +46,10 @@ export function MinhaRequisicao() {
       });
 
       if (!res.ok) {
-        // Tenta capturar a mensagem de erro que vem da Exception do Spring (Ex: falta conta bancária)
         const errData = await res.json();
         throw new Error(errData.message || "Erro ao enviar requisição");
       }
 
-      // Atualiza o status local para mudar o botão imediatamente
       setRequisicao((prev) =>
         prev ? { ...prev, status: "AGUARDANDO_ANALISE" } : null,
       );
@@ -61,7 +57,7 @@ export function MinhaRequisicao() {
     } catch (error: any) {
       alert(
         error.message ||
-          "Falha ao enviar a requisição para análise. Verifique seus documentos e dados bancários no perfil.",
+          "Falha ao enviar a requisição para análise. Verifique os seus documentos e dados bancários no perfil.",
       );
     } finally {
       setSubmitting(false);
@@ -84,7 +80,6 @@ export function MinhaRequisicao() {
     return { text, colorClass };
   };
 
-  // Pode enviar se estiver aguardando envio OU se o professor tiver reprovado (para corrigir e reenviar)
   const podeEnviar =
     requisicao?.status === "AGUARDANDO_ENVIO" ||
     requisicao?.status === "REPROVADO";
@@ -92,7 +87,6 @@ export function MinhaRequisicao() {
   return (
     <div className="flex-grow w-full bg-[#f9fafb] min-h-[calc(100vh-64px)] pb-12">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Header */}
         <div>
           <button
             onClick={() => navigate(-1)}
@@ -108,7 +102,6 @@ export function MinhaRequisicao() {
               Minha Requisição
             </h2>
 
-            {/* Status Visual */}
             {requisicao && (
               <span
                 className={`px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider border ${getStatusDisplay(requisicao.status).colorClass}`}
@@ -131,12 +124,11 @@ export function MinhaRequisicao() {
               error
             </span>
             <p className="font-semibold">
-              Requisição não encontrada ou você não tem permissão para vê-la.
+              Requisição não encontrada ou não tens permissão para a visualizar.
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Se houver motivo de reprovação, mostra para o aluno poder arrumar */}
             {requisicao.status === "REPROVADO" &&
               requisicao.motivoReprovacao && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
@@ -150,28 +142,85 @@ export function MinhaRequisicao() {
                     {requisicao.motivoReprovacao}
                   </p>
                   <p className="text-xs text-red-600 mt-2 italic">
-                    Corrija as pendências no seu perfil e envie a requisição
-                    novamente abaixo.
+                    Corrija as pendências e envie a requisição novamente abaixo.
                   </p>
                 </div>
               )}
 
-            {/* Secão de Documentos (Vazia por enquanto) */}
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm min-h-[250px] flex flex-col">
-              <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-slate-400">
-                  folder
-                </span>
-                Documentos da Viagem
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-slate-400">
+                    folder
+                  </span>
+                  Documentos Exigidos
+                </h3>
+              </div>
 
-              <div className="flex-grow flex items-center justify-center text-center text-slate-500 font-medium border-2 border-dashed border-slate-200 rounded-lg bg-slate-50 p-6">
-                Espaço reservado para o envio de documentos da viagem (quando
-                solicitado).
+              <div className="space-y-4">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-shadow">
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-red-500 text-3xl mt-0.5">
+                      description
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-red-900">ANEXO V</h4>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-red-100 text-red-700 border-red-200">
+                          Pendente
+                        </span>
+                      </div>
+                      <p className="text-xs text-red-800 font-medium max-w-lg mt-0.5">
+                        TERMO DE RESPONSABILIDADE E AUTORIZAÇÃO/CIÊNCIA
+                      </p>
+                      <p className="text-[11px] font-bold text-red-600 mt-1 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">
+                          error
+                        </span>
+                        Aviso: Enviar anexo assinado
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() =>
+                        alert("Em breve: Visualizar PDF em branco")
+                      }
+                      className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md transition-colors"
+                      title="Visualizar modelo"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">
+                        visibility
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        alert("Em breve: Formulário de preenchimento online")
+                      }
+                      className="px-3 py-1.5 bg-white border border-red-200 text-red-700 font-semibold text-xs rounded-md hover:bg-red-100 transition-colors whitespace-nowrap shadow-sm"
+                    >
+                      Preencher online
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        alert("Em breve: Upload do documento assinado.")
+                      }
+                      className="flex items-center gap-1 ml-1 px-3 py-1.5 bg-red-600 text-white font-semibold text-xs rounded-md hover:bg-red-700 transition-colors shadow-sm"
+                      title="Fazer upload do anexo assinado"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        upload_file
+                      </span>
+                      Enviar
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Ações */}
             <div className="flex justify-end pt-4">
               <button
                 onClick={handleConfirmarRequisicao}

@@ -17,16 +17,12 @@ export function DetalhesViagem() {
   const [requisicoes, setRequisicoes] = useState<RequisicaoDetalhesDTO[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // NOVO: Estado para o filtro de status
+  // Estado para o filtro de status
   const [statusFilter, setStatusFilter] = useState<string>("TODOS");
 
   // Estados Modal Adicionar Aluno
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [addForm, setAddForm] = useState({
-    emailDiscente: "",
-    valorDiaria: 0,
-    inscricaoValor: 0,
-  });
+  const [addForm, setAddForm] = useState({ emailDiscente: "" });
   const [addLoading, setAddLoading] = useState(false);
 
   // Estados Modal Info Completa
@@ -46,10 +42,12 @@ export function DetalhesViagem() {
   const [submittingEval, setSubmittingEval] = useState(false);
 
   const predefinedReasons = [
-    "Dados bancários inválidos",
-    "Informações do responsável inválidas",
-    "Documentação do responsável errada",
-    "Documentação de identificação errada",
+    "Documento de identificação do discente ilegível ou incorreto",
+    "Termo de Compromisso (Anexo V) ausente ou preenchido incorretamente",
+    "Documento de autorização/identificação do responsável legal ilegível ou incorreto",
+    "Informações do responsável legal estão divergentes ou incompletas",
+    "Dados pessoais do discente (nome, CPF, RG, etc.) divergentes da documentação",
+    "Falta de assinatura ou formatação inválida nos documentos exigidos",
   ];
 
   useEffect(() => {
@@ -97,8 +95,8 @@ export function DetalhesViagem() {
     try {
       const payload = {
         emailDiscente: addForm.emailDiscente,
-        valorDiaria: parseFloat(addForm.valorDiaria.toString()),
-        inscricaoValor: parseFloat(addForm.inscricaoValor.toString()),
+        valorDiaria: 0, // Removido do Front, enviado 0 para não quebrar API
+        inscricaoValor: 0, // Removido do Front, enviado 0
       };
 
       const res = await fetch(
@@ -113,7 +111,7 @@ export function DetalhesViagem() {
       if (!res.ok) throw new Error("Erro ao adicionar aluno");
 
       setIsAddModalOpen(false);
-      setAddForm({ emailDiscente: "", valorDiaria: 0, inscricaoValor: 0 });
+      setAddForm({ emailDiscente: "" });
       fetchRequisicoes();
     } catch (error) {
       alert("Falha ao adicionar aluno. Verifique o e-mail.");
@@ -199,9 +197,8 @@ export function DetalhesViagem() {
     setIsInfoModalOpen(true);
   };
 
-  // Função Temporária para o Lixinho
   const handleDeleteAluno = (reqId: string) => {
-    alert("Em breve: Funcionalidade para remover este aluno da viagem.");
+    alert("Fazer ainda.");
   };
 
   const getStatusDisplay = (status: StatusRequisicao) => {
@@ -242,7 +239,6 @@ export function DetalhesViagem() {
     return idade < 18;
   };
 
-  // NOVO: Lógica do Filtro
   const requisicoesFiltradas = requisicoes.filter((req) => {
     if (statusFilter === "TODOS") return true;
     return req.status === statusFilter;
@@ -286,7 +282,7 @@ export function DetalhesViagem() {
               <span className="material-symbols-outlined text-[18px]">
                 folder
               </span>{" "}
-              Documentos da Viagem
+              Anexos da Viagem
             </button>
             <button
               onClick={() => setActiveTab("ALUNOS")}
@@ -295,28 +291,129 @@ export function DetalhesViagem() {
               <span className="material-symbols-outlined text-[18px]">
                 groups
               </span>{" "}
-              Alunos Inscritos
+              Alunos
             </button>
           </nav>
         </div>
 
+        {/* Tab Content: Documentos GERAIS da viagem */}
         {activeTab === "DOCUMENTOS" && (
-          <div className="py-12 text-center text-slate-500 font-medium border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
-            Nenhum documento geral da viagem anexado no momento.
+          <div className="space-y-4">
+            {/* ANEXO I */}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-shadow">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-blue-500 text-3xl">
+                  description
+                </span>
+                <div>
+                  <h4 className="font-bold text-slate-900">ANEXO I</h4>
+                  <p className="text-xs text-slate-500 font-medium">
+                    FORMULÁRIO DE SOLICITAÇÃO COLETIVA DE AJUDA DE CUSTO
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => alert("Em breve: Visualizar PDF")}
+                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  title="Visualizar"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    visibility
+                  </span>
+                </button>
+                <button
+                  onClick={() => alert("Em breve: Baixar PDF")}
+                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  title="Baixar"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    download
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* ANEXO III */}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-shadow">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-blue-500 text-3xl">
+                  description
+                </span>
+                <div>
+                  <h4 className="font-bold text-slate-900">ANEXO III</h4>
+                  <p className="text-xs text-slate-500 font-medium">
+                    FORMULÁRIO DE PLANEJAMENTO DE ATIVIDADE DE CAMPO
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => alert("Em breve: Visualizar PDF")}
+                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  title="Visualizar"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    visibility
+                  </span>
+                </button>
+                <button
+                  onClick={() => alert("Em breve: Baixar PDF")}
+                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  title="Baixar"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    download
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* ANEXO IV (Automático) */}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-shadow">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-emerald-500 text-3xl">
+                  list_alt
+                </span>
+                <div>
+                  <h4 className="font-bold text-slate-900">ANEXO IV</h4>
+                  <p className="text-xs text-slate-500 font-medium">
+                    DISCENTES PARTICIPANTES DA VISITA TÉCNICA/ATIVIDADE DE CAMPO
+                  </p>
+                  <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                    Gerado automaticamente
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => alert("Em breve: Visualizar PDF")}
+                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                  title="Visualizar"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    visibility
+                  </span>
+                </button>
+                <button
+                  onClick={() => alert("Em breve: Baixar PDF")}
+                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                  title="Baixar"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    download
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Tab Content: Alunos */}
         {activeTab === "ALUNOS" && (
           <div className="space-y-6">
-            {/* NOVO: Topo com Filtro e Botão de Adicionar */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-4 flex-wrap">
-                <h3 className="text-lg font-bold text-slate-800">
-                  Alunos e Requisições
-                </h3>
-
-                {/* Select do Filtro */}
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -330,15 +427,29 @@ export function DetalhesViagem() {
                 </select>
               </div>
 
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="bg-[#008060] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#006048] transition-colors flex items-center gap-1 shrink-0"
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  person_add
-                </span>{" "}
-                Adicionar Aluno
-              </button>
+              {/* Botões de Ação */}
+              <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 shrink-0">
+                <button
+                  onClick={() => alert("Fazer ainda.")}
+                  className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap"
+                  title="Baixa os documentos de todos os alunos agrupados por pasta"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    folder_zip
+                  </span>{" "}
+                  Baixar Documentos (.ZIP)
+                </button>
+
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="bg-[#008060] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#006048] transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    person_add
+                  </span>{" "}
+                  Adicionar Aluno
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -355,6 +466,7 @@ export function DetalhesViagem() {
                   const menorDeIdade = isMenorDeIdade(
                     req.discente.dataNascimento,
                   );
+                  const isAguardandoEnvio = req.status === "AGUARDANDO_ENVIO";
 
                   return (
                     <div
@@ -377,7 +489,7 @@ export function DetalhesViagem() {
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 font-medium">
-                          Matrícula: {req.discente.matricula}
+                          {req.discente.email}
                         </p>
                       </div>
 
@@ -422,18 +534,14 @@ export function DetalhesViagem() {
                           )}
                         </div>
 
+                        {/* Anexo V Padronizado */}
                         <div className="flex flex-col items-center justify-between min-h-[44px] border-l border-slate-200 pl-6">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                             Anexo V
                           </span>
-                          <button
-                            title="Em breve..."
-                            className="text-slate-400 hover:bg-slate-200 p-1 rounded-md transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">
-                              visibility
-                            </span>
-                          </button>
+                          <span className="text-[11px] text-slate-400 font-medium py-1">
+                            Pendente
+                          </span>
                         </div>
 
                         {menorDeIdade && (
@@ -481,13 +589,22 @@ export function DetalhesViagem() {
                         )}
                       </div>
 
-                      {/* 3. Ações Rápidas - MUDANÇA DOS ÍCONES (Thumb up / Thumb down / Delete) */}
+                      {/* 3. Ações Rápidas */}
                       <div className="flex items-center justify-end gap-1 xl:border-l xl:border-slate-100 xl:pl-4">
                         <button
                           onClick={() => openRejectModal(req)}
-                          disabled={submittingEval}
-                          title="Reprovar Requisição"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-all disabled:opacity-50 flex items-center justify-center"
+                          disabled={submittingEval || isAguardandoEnvio}
+                          title={
+                            isAguardandoEnvio
+                              ? "Aguardando envio do aluno"
+                              : "Reprovar Requisição"
+                          }
+                          className={`p-2 rounded-full transition-all flex items-center justify-center 
+                            ${
+                              isAguardandoEnvio || submittingEval
+                                ? "text-slate-300 cursor-not-allowed"
+                                : "text-red-500 hover:text-red-700 hover:bg-red-50"
+                            }`}
                         >
                           <span className="material-symbols-outlined text-[22px]">
                             thumb_down
@@ -496,9 +613,18 @@ export function DetalhesViagem() {
 
                         <button
                           onClick={() => handleQuickApprove(req.requisicaoId)}
-                          disabled={submittingEval}
-                          title="Aprovar Requisição"
-                          className="text-green-500 hover:text-green-700 hover:bg-green-50 p-2 rounded-full transition-all disabled:opacity-50 flex items-center justify-center"
+                          disabled={submittingEval || isAguardandoEnvio}
+                          title={
+                            isAguardandoEnvio
+                              ? "Aguardando envio do aluno"
+                              : "Aprovar Requisição"
+                          }
+                          className={`p-2 rounded-full transition-all flex items-center justify-center 
+                            ${
+                              isAguardandoEnvio || submittingEval
+                                ? "text-slate-300 cursor-not-allowed"
+                                : "text-green-500 hover:text-green-700 hover:bg-green-50"
+                            }`}
                         >
                           <span className="material-symbols-outlined text-[22px]">
                             thumb_up
@@ -515,7 +641,6 @@ export function DetalhesViagem() {
                           </span>
                         </button>
 
-                        {/* Ícone de Lixeira */}
                         <button
                           onClick={() => handleDeleteAluno(req.requisicaoId)}
                           title="Remover Aluno da Viagem"
@@ -571,44 +696,6 @@ export function DetalhesViagem() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                   placeholder="aluno@academico.ifpb.edu.br"
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Valor Diária (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={addForm.valorDiaria}
-                    onChange={(e) =>
-                      setAddForm({
-                        ...addForm,
-                        valorDiaria: parseFloat(e.target.value),
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Inscrição (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={addForm.inscricaoValor}
-                    onChange={(e) =>
-                      setAddForm({
-                        ...addForm,
-                        inscricaoValor: parseFloat(e.target.value),
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  />
-                </div>
               </div>
               <div className="pt-4 flex gap-3 justify-end">
                 <button

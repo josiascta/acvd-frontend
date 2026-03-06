@@ -1,10 +1,10 @@
 interface TripCardProps {
   trip: ViagemDTO;
-  // Removi o nomeResponsavel daqui, pois agora vem dentro de 'trip'
+  statusRequisicao?: string; // <-- NOVO: Recebe o status (se for aluno)
   onClick?: () => void;
 }
 
-export function TripCard({ trip, onClick }: TripCardProps) {
+export function TripCard({ trip, statusRequisicao, onClick }: TripCardProps) {
   // Formatador simples para deixar a data amigável (ex: "12 Out")
   const formatDate = (dateString: string) => {
     const dateToFormat = dateString.includes("T")
@@ -21,10 +21,30 @@ export function TripCard({ trip, onClick }: TripCardProps) {
       ? trip.itinerarios[trip.itinerarios.length - 1].local
       : "Destino a definir";
 
-  // Lógica para descobrir o status da documentação dinamicamente
-  const dataAtual = new Date();
-  const prazoAnexos = new Date(trip.prazoAnexosDiscentes);
-  const isDocPendente = prazoAnexos >= dataAtual;
+  // Função para renderizar a Badge de Status apenas para os Alunos
+  const renderStatusBadge = () => {
+    if (!statusRequisicao) return null; // Se não tiver status (Servidor), não mostra nada
+
+    const text = statusRequisicao.replace("_", " ");
+    let colorClass = "bg-slate-50 text-slate-700 border-slate-200";
+
+    if (statusRequisicao === "AGUARDANDO_ENVIO")
+      colorClass = "bg-amber-50 text-amber-700 border-amber-200";
+    if (statusRequisicao === "AGUARDANDO_ANALISE")
+      colorClass = "bg-blue-50 text-blue-700 border-blue-200";
+    if (statusRequisicao === "APROVADA")
+      colorClass = "bg-green-50 text-green-700 border-green-200";
+    if (statusRequisicao === "REPROVADO")
+      colorClass = "bg-red-50 text-red-700 border-red-200";
+
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border transition-colors whitespace-nowrap shrink-0 ${colorClass}`}
+      >
+        {text}
+      </span>
+    );
+  };
 
   return (
     <article
@@ -73,17 +93,8 @@ export function TripCard({ trip, onClick }: TripCardProps) {
             </div>
           </div>
 
-          {/* Badge de Status Documentação */}
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border transition-colors whitespace-nowrap shrink-0
-            ${
-              isDocPendente
-                ? "bg-amber-50 text-amber-700 border-amber-200"
-                : "bg-[#008060]/10 text-[#008060] border-[#008060]/20"
-            }`}
-          >
-            {isDocPendente ? "Doc Pendente" : "Doc Aprovada"}
-          </span>
+          {/* Badge de Status Documentação (Renderiza o status do aluno ou fica vazio) */}
+          {renderStatusBadge()}
         </div>
 
         {/* Footer do Card */}
