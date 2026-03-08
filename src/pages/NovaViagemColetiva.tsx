@@ -2,22 +2,37 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_URL, getHeaders } from "../utils/api";
 
+// Definição estrita das interfaces
+interface FormDataState {
+  dataPartida: string;
+  dataRetorno: string;
+  prazoAnexosDiscentes: string;
+}
+
+interface ItinerarioState {
+  horarioEntrada: string;
+  horarioSaida: string;
+  local: string;
+}
+
 export function NovaViagemColetiva() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataState>({
     dataPartida: "",
     dataRetorno: "",
     prazoAnexosDiscentes: "",
-    valorDiariaCnpq: "",
   });
 
-  // Estado dinâmico para os itinerários
-  const [itinerarios, setItinerarios] = useState([
+  const [itinerarios, setItinerarios] = useState<ItinerarioState[]>([
     { horarioEntrada: "", horarioSaida: "", local: "" },
   ]);
+
+  // Data atual formatada para o atributo "min" dos inputs HTML5
+  const todayDateOnly = new Date().toISOString().split("T")[0];
+  const todayDateTime = new Date().toISOString().slice(0, 16);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -26,7 +41,7 @@ export function NovaViagemColetiva() {
 
   const handleItinerarioChange = (
     index: number,
-    field: string,
+    field: keyof ItinerarioState,
     value: string,
   ) => {
     const novosItinerarios = [...itinerarios];
@@ -47,19 +62,55 @@ export function NovaViagemColetiva() {
     }
   };
 
+  const validateDates = (): boolean => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const partida = new Date(formData.dataPartida);
+    const retorno = new Date(formData.dataRetorno);
+    const prazo = new Date(formData.prazoAnexosDiscentes);
+
+    // Adicionando o fuso horário para evitar problemas de data no JS
+    partida.setHours(hoje.getHours() + 3);
+    retorno.setHours(hoje.getHours() + 3);
+    prazo.setHours(hoje.getHours() + 3);
+
+    if (partida < hoje || retorno < hoje || prazo < hoje) {
+      setErro(
+        "As datas de partida, retorno ou prazo não podem estar no passado.",
+      );
+      return false;
+    }
+
+    if (retorno < partida) {
+      setErro("A data de retorno não pode ser anterior à data de partida.");
+      return false;
+    }
+
+    if (partida < prazo) {
+      setErro(
+        "O prazo para os discentes deve ser anterior ou igual à data de partida.",
+      );
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setErro(null);
+
+    if (!validateDates()) return;
+
+    setLoading(true);
 
     const payload = {
       ...formData,
-      valorDiariaCnpq: parseFloat(formData.valorDiariaCnpq),
+      valorDiariaCnpq: 0, // Valor fixo e zerado exigido pela nova regra
       tipoViagem: "COLETIVA",
       itinerarios: itinerarios.map((it) => ({
         ...it,
-        // O input datetime-local nativo já formata para a ISO (ex: "2024-10-12T09:00:00")
-        // O backend (LocalDateTime) aceita esse padrão
       })),
     };
 
@@ -75,10 +126,9 @@ export function NovaViagemColetiva() {
         throw new Error(errData.message || "Erro ao criar a viagem.");
       }
 
-      // Voltar para a Home após sucesso
       navigate("/");
     } catch (error: any) {
-      setErro(error.message);
+      setErro(error.message || "Ocorreu um erro inesperado.");
     } finally {
       setLoading(false);
     }
@@ -116,8 +166,8 @@ export function NovaViagemColetiva() {
           onSubmit={handleSubmit}
           className="space-y-6 bg-white p-6 rounded-xl shadow-sm border border-slate-200"
         >
-          {/* Dados Gerais */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Dados Gerais - Ajustado para grid-cols-3 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
                 Data de Partida
@@ -126,6 +176,7 @@ export function NovaViagemColetiva() {
                 type="date"
                 name="dataPartida"
                 required
+                min={todayDateOnly}
                 value={formData.dataPartida}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-[#008060] focus:border-[#008060] text-sm"
@@ -139,6 +190,7 @@ export function NovaViagemColetiva() {
                 type="date"
                 name="dataRetorno"
                 required
+                min={todayDateOnly}
                 value={formData.dataRetorno}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-[#008060] focus:border-[#008060] text-sm"
@@ -146,36 +198,17 @@ export function NovaViagemColetiva() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
-                Prazo para Anexos (Discentes)
+                Prazo Anexos (Discentes)
               </label>
               <input
                 type="date"
                 name="prazoAnexosDiscentes"
                 required
+                min={todayDateOnly}
                 value={formData.prazoAnexosDiscentes}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-[#008060] focus:border-[#008060] text-sm"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">
-                Valor da Diária (CNPq)
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 text-sm">
-                  R$
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  name="valorDiariaCnpq"
-                  required
-                  value={formData.valorDiariaCnpq}
-                  onChange={handleInputChange}
-                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-[#008060] focus:border-[#008060] text-sm"
-                />
-              </div>
             </div>
           </div>
 
@@ -238,6 +271,7 @@ export function NovaViagemColetiva() {
                       <input
                         type="datetime-local"
                         required
+                        min={todayDateTime}
                         value={it.horarioEntrada}
                         onChange={(e) =>
                           handleItinerarioChange(
@@ -256,6 +290,7 @@ export function NovaViagemColetiva() {
                       <input
                         type="datetime-local"
                         required
+                        min={it.horarioEntrada || todayDateTime} // Saída não pode ser menor que entrada
                         value={it.horarioSaida}
                         onChange={(e) =>
                           handleItinerarioChange(
