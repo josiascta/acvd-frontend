@@ -1,4 +1,4 @@
-interface DocumentoResponseDTO {
+export interface DocumentoResponseDTO {
   id: string;
   nomeOriginal: string;
   tamanho: string;
@@ -6,7 +6,7 @@ interface DocumentoResponseDTO {
   dataUpload: string;
 }
 
-interface ContaBancariaDTO {
+export interface ContaBancariaDTO {
   id?: string;
   banco: string;
   numero: string;
@@ -14,7 +14,7 @@ interface ContaBancariaDTO {
   operacao: string;
 }
 
-interface ResponsavelLegalDTO {
+export interface ResponsavelLegalDTO {
   id?: string;
   nome: string;
   cpf: string;

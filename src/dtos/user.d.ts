@@ -1,7 +1,16 @@
-type UserRole = "SERVIDOR" | "DISCENTE";
+// cSpell:disable-Portuguese
+export type UserRole = "SERVIDOR" | "DISCENTE";
 
-type UserResponse = {
-  userId: UUID;
+export interface ContaBancariaDTO {
+  id?: string;
+  banco: string;
+  numero: string; 
+  agencia: string;
+  operacao?: string;
+}
+
+export type UserResponse = {
+  userId: string;
   nome: string;
   fotoDePerfil: string;
   email: string;
@@ -9,7 +18,9 @@ type UserResponse = {
   telefone: string;
   role: UserRole;
   numeroRg?: string;
-  numeroCpf?: string;
+  numeroCpf?: string; 
   dataNascimento?: string;
   curso?: string;
+  endereco?: string;
+  contaBancaria?: ContaBancariaDTO; 
 };
