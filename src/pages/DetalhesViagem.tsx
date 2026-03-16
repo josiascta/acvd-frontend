@@ -6,6 +6,7 @@ import {
   handleViewDocument,
   handleDownloadDocument,
 } from "../utils/api";
+import type { ViagemDTO } from "../dtos/viagem";
 
 export function DetalhesViagem() {
   const { id } = useParams<{ id: string }>();

@@ -4,15 +4,20 @@ import { TripCard } from "../components/TripCard";
 import { FabButton } from "../components/FabButton";
 import { useAuth } from "../hooks/useAuth";
 import { API_URL, getHeaders } from "../utils/api";
-// Importar tipos conforme a organização do seu projeto
-// import { ViagemDTO } from "../dtos/viagem";
-// import { RequisicaoResumoDTO } from "../dtos/requisicao";
+import type { ViagemDTO } from "../dtos/viagem";
 
-// Adicionamos a propriedade `status` ao tipo base
+// Definimos uma interface local para evitar o erro de 'any' sem precisar de arquivo novo
+interface SolicitacaoIndividualResumo {
+  id: string;
+  viagemId: string;
+  viagem?: ViagemDTO;
+  nome: string;
+}
+
 type HomeItem = {
   viagem: ViagemDTO;
   requisicaoId?: string;
-  status?: string; // <-- NOVO
+  status?: string;
 };
 
 export function Home() {
@@ -30,44 +35,75 @@ export function Home() {
         setLoading(true);
 
         if (session?.role === "SERVIDOR") {
-          // Lógica do Servidor: Busca as próprias viagens
           const res = await fetch(`${API_URL}/viagens/minhas`, {
             headers: getHeaders(),
           });
           if (!res.ok) throw new Error("Falha ao buscar viagens");
-
           const data: ViagemDTO[] = await res.json();
-          // Servidor não envia 'status' para a HomeItem
           setItems(data.map((v) => ({ viagem: v })));
+          
         } else if (session?.role === "DISCENTE") {
-          // Lógica do Discente: Busca as requisições vinculadas a ele
-          const res = await fetch(`${API_URL}/requisicoes/minhas`, {
-            headers: getHeaders(),
-          });
-          if (!res.ok) throw new Error("Falha ao buscar requisições");
+          const [resReq, resInd] = await Promise.all([
+            fetch(`${API_URL}/requisicoes/minhas`, { headers: getHeaders() }),
+            fetch(`${API_URL}/solicitacoes-individuais/minhas`, { headers: getHeaders() })
+          ]);
 
-          const reqs: RequisicaoResumoDTO[] = await res.json();
+          const reqs = resReq.ok ? await resReq.json() : [];
+          // Tipagem inline para matar o erro de 'any' do ESLint
+          const individuais: SolicitacaoIndividualResumo[] = resInd.ok ? await resInd.json() : [];
 
-          // Faz o fetch dos dados da viagem e anexa o req.status no HomeItem
-          const itemsPromises = reqs.map(async (req) => {
+          // 1. Processa as requisições coletivas
+          const coletivasPromises = reqs.map(async (req: { id: string, viagemId: string, status: string }) => {
             const vRes = await fetch(`${API_URL}/viagens/${req.viagemId}`, {
               headers: getHeaders(),
             });
             const viagemData: ViagemDTO = await vRes.json();
             return {
-              viagem: viagemData,
+              viagem: { ...viagemData, solicitacaoId: req.id },
               requisicaoId: req.id,
-              status: req.status, // <-- INJETAMOS O STATUS AQUI
+              status: req.status,
             };
           });
 
-          const combinedItems = await Promise.all(itemsPromises);
-          setItems(combinedItems);
+          // 2. Processa as individuais
+          const individuaisPromises = individuais.map(async (sol) => {
+            let viagemData = sol.viagem;
+
+            if (!viagemData && sol.viagemId) {
+              const vRes = await fetch(`${API_URL}/viagens/${sol.viagemId}`, {
+                headers: getHeaders(),
+              });
+              if (vRes.ok) {
+                viagemData = await vRes.json();
+              }
+            }
+
+            return {
+              // Injetamos o ID da solicitação no campo que você criou no ViagemDTO
+              viagem: { 
+                ...viagemData, 
+                solicitacaoId: sol.id, 
+                atividadeEvento: (sol as any).atividadeEvento || (sol as any).nomeEvento,
+                tipoViagem: "INDIVIDUAL" as const 
+              } as ViagemDTO,
+              requisicaoId: sol.id,
+              status: "GERADA",
+            };
+          });
+
+          const [coletivasItems, itensIndividuais] = await Promise.all([
+            Promise.all(coletivasPromises),
+            Promise.all(individuaisPromises)
+          ]);
+          
+          const listaFinal = [...coletivasItems, ...itensIndividuais].filter(
+            (item) => item.viagem && item.viagem.itinerarios
+          );
+
+          setItems(listaFinal);
         }
-      } catch (err: any) {
-        setErro(
-          "Não foi possível carregar os dados. Tente novamente mais tarde.",
-        );
+      } catch (err: unknown) {
+        setErro("Não foi possível carregar os dados.");
         console.error(err);
       } finally {
         setLoading(false);
@@ -81,12 +117,9 @@ export function Home() {
 
   const itemsFiltrados = items.filter((item) => {
     if (busca.trim() === "") return true;
-
-    const localFinal =
-      item.viagem.itinerarios.length > 0
+    const localFinal = item.viagem.itinerarios.length > 0
         ? item.viagem.itinerarios[item.viagem.itinerarios.length - 1].local
         : "";
-
     return localFinal.toLowerCase().includes(busca.toLowerCase());
   });
 
@@ -102,51 +135,43 @@ export function Home() {
     if (session?.role === "SERVIDOR") {
       navigate(`/viagem/${item.viagem.id}`);
     } else {
-      navigate(`/minha-requisicao/${item.requisicaoId}`);
+      if (item.viagem.tipoViagem === "INDIVIDUAL") {
+        // Usa o solicitacaoId que injetamos na busca acima
+        navigate(`/minha-solicitacao-individual/${item.viagem.solicitacaoId}`);
+      } else {
+        navigate(`/minha-requisicao/${item.requisicaoId}`);
+      }
     }
   };
 
   return (
     <div className="flex-grow w-full bg-[#f9fafb] min-h-[calc(100vh-64px)] pb-12">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2">
           <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">
-              Minhas Viagens
-            </h2>
-            <p className="text-slate-500 text-sm max-w-2xl">
-              Acompanhe suas solicitações de viagens, roteiros e prazos.
-            </p>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Minhas Viagens</h2>
+            <p className="text-slate-500 text-sm max-w-2xl">Acompanhe suas solicitações, roteiros e prazos.</p>
           </div>
 
-          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm w-full md:max-w-xs transition-colors focus-within:border-[#008060] focus-within:ring-1 focus-within:ring-[#008060]">
-            <span className="material-symbols-outlined text-slate-400 text-[20px]">
-              search
-            </span>
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm w-full md:max-w-xs focus-within:border-[#008060] focus-within:ring-1 focus-within:ring-[#008060]">
+            <span className="material-symbols-outlined text-slate-400 text-[20px]">search</span>
             <input
               type="text"
               placeholder="Buscar por destino..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="w-full bg-transparent border-none text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-0 p-0"
+              className="w-full bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0"
             />
           </div>
         </div>
 
-        {/* Listagem / Loading / Erros */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-            <span className="material-symbols-outlined animate-spin text-4xl mb-4 text-[#008060]">
-              progress_activity
-            </span>
+            <span className="material-symbols-outlined animate-spin text-4xl mb-4 text-[#008060]">progress_activity</span>
             <p className="font-medium">Carregando viagens...</p>
           </div>
         ) : erro ? (
           <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-xl text-center">
-            <span className="material-symbols-outlined text-3xl mb-2">
-              error
-            </span>
             <p className="font-medium">{erro}</p>
           </div>
         ) : (
@@ -156,7 +181,7 @@ export function Home() {
                 <TripCard
                   key={item.requisicaoId || item.viagem.id}
                   trip={item.viagem}
-                  statusRequisicao={item.status} // <-- Repassando o status para o card
+                  statusRequisicao={item.status}
                   onClick={() => handleCardClick(item)}
                 />
               ))
@@ -169,12 +194,7 @@ export function Home() {
         )}
       </main>
 
-      {/* Botão Flutuante (FAB) */}
-      <FabButton
-        label="Nova Viagem"
-        icon="add"
-        onClick={handleNovaViagemClick}
-      />
+      <FabButton label="Nova Viagem" icon="add" onClick={handleNovaViagemClick} />
     </div>
   );
 }

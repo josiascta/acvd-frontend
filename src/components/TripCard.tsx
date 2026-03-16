@@ -57,10 +57,10 @@ export function TripCard({ trip, statusRequisicao, onClick }: TripCardProps) {
           <div className="space-y-1.5 text-left flex-1 min-w-0 pr-3">
             {/* Título */}
             <h3
-              title={localFinal}
+              title={trip.atividadeEvento || trip.localidadeEvento || localFinal}
               className="text-lg font-bold text-slate-900 leading-tight group-hover:text-[#008060] transition-colors truncate"
             >
-              {localFinal}
+              {trip.atividadeEvento || trip.localidadeEvento || localFinal}
             </h3>
 
             {/* Tipo de Viagem (Tag) */}
@@ -86,7 +86,7 @@ export function TripCard({ trip, statusRequisicao, onClick }: TripCardProps) {
               </span>
               <span
                 className="truncate"
-                title={`Responsável: ${trip.nomeResponsavel || "Não informado"}`}
+                title={`Responsável: ${trip.name || trip.nomeResponsavel || "Não informado"}`}
               >
                 Responsável: {trip.nomeResponsavel || "Não informado"}
               </span>
