@@ -5,7 +5,8 @@ import { API_URL, getHeaders } from "../utils/api";
 export function MinhaRequisicao() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
+const [showModal, setShowModal] = useState(false);
+const [dadosTemp, setDadosTemp] = useState({ nome: '', contato: '' });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [requisicao, setRequisicao] = useState<RequisicaoResumoDTO | null>(
@@ -79,7 +80,70 @@ export function MinhaRequisicao() {
 
     return { text, colorClass };
   };
+ 
+ const handleDownloadTermo = async (dados: RequisicaoResumoDTO, manual?: { nome: string, contato: string }) => {
+  try {
+    const viagemId = dados.viagemId;
+    const alunoId = dados.discenteId;
 
+    if (!viagemId || !alunoId) {
+      alert("Erro: Dados da viagem ou do discente não encontrados.");
+      return;
+    }
+
+    // Monta a URL com os parâmetros do Modal, se existirem
+    let urlFetch = `http://localhost:8080/solicitacoes-coletivas/${viagemId}/termo-individual/${alunoId}`;
+    if (manual?.nome) {
+      urlFetch += `?nomeResp=${encodeURIComponent(manual.nome)}&contatoResp=${encodeURIComponent(manual.contato)}`;
+    }
+
+    const response = await fetch(urlFetch, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro ao gerar o PDF. Verifique se os dados do aluno e viagem estão completos.");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `Anexo_V_${dados.discenteNome?.replace(/\s+/g, '_') || 'Termo'}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (error: any) {
+    alert(error.message);
+  }
+};
+const handleBotaoBaixar = (requisicao: any) => {
+  // Se o DTO já veio com responsável, baixa direto. 
+  // Se não, abre a telinha.
+  if (!requisicao.responsavelLegal?.nome) {
+    setShowModal(true);
+  } else {
+    handleDownloadTermo(requisicao);
+  }
+};
+
+// 3. A função que o botão "Confirmar" de dentro da telinha chama
+const confirmarESalvar = async () => {
+  if (!dadosTemp.nome || !dadosTemp.contato) {
+    alert("Por favor, preencha todos os campos do responsável.");
+    return;
+  }
+  setShowModal(false);
+  // Passa a requisição atual e os dados digitados na telinha
+  if (requisicao) {
+    handleDownloadTermo(requisicao, dadosTemp);
+  }
+};
   const podeEnviar =
     requisicao?.status === "AGUARDANDO_ENVIO" ||
     requisicao?.status === "REPROVADO";
@@ -195,14 +259,13 @@ export function MinhaRequisicao() {
                       </span>
                     </button>
 
-                    <button
-                      onClick={() =>
-                        alert("Em breve: Formulário de preenchimento online")
-                      }
-                      className="px-3 py-1.5 bg-white border border-red-200 text-red-700 font-semibold text-xs rounded-md hover:bg-red-100 transition-colors whitespace-nowrap shadow-sm"
-                    >
-                      Preencher online
-                    </button>
+                <button
+                  onClick={() => handleBotaoBaixar(requisicao)} // MUDADO AQUI
+                  className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 font-semibold text-xs rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap shadow-sm flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[14px]">download</span>
+                  Baixar Anexo V
+                </button>
 
                     <button
                       onClick={() =>
@@ -247,7 +310,39 @@ export function MinhaRequisicao() {
                       : "Indisponível"}
               </button>
             </div>
+            {showModal && (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 border border-slate-200">
+      <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+        <span className="material-symbols-outlined text-blue-600">family_restroom</span>
+        Dados do Responsável
+      </h3>
+      <p className="text-xs text-slate-500 mb-4">
+        Precisamos desses dados para preencher o **Anexo V** da sua viagem.
+      </p>
+
+      <div className="space-y-3">
+        <input 
+          className="w-full p-2 text-sm border rounded-md outline-blue-500"
+          placeholder="Nome do Responsável"
+          onChange={(e) => setDadosTemp({...dadosTemp, nome: e.target.value})}
+        />
+        <input 
+          className="w-full p-2 text-sm border rounded-md outline-blue-500"
+          placeholder="Telefone/Contato"
+          onChange={(e) => setDadosTemp({...dadosTemp, contato: e.target.value})}
+        />
+      </div>
+
+      <div className="flex justify-end gap-2 mt-6">
+        <button onClick={() => setShowModal(false)} className="px-3 py-1.5 text-xs text-slate-500 font-bold">Cancelar</button>
+        <button onClick={confirmarESalvar} className="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-md font-bold shadow-lg">Gerar PDF</button>
+      </div>
+    </div>
+  </div>
+)}
           </div>
+          
         )}
       </main>
     </div>

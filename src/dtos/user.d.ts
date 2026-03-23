@@ -21,6 +21,7 @@ export type UserResponse = {
   numeroCpf?: string; 
   dataNascimento?: string;
   curso?: string;
+  turmaPeriodo?: string;
   endereco?: string;
   contaBancaria?: ContaBancariaDTO; 
 };

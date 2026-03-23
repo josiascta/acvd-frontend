@@ -82,6 +82,7 @@ const getPerfilSchema = (isDiscente: boolean) => {
         ),
       dataNascimento: z.string().min(1, "A data de nascimento é obrigatória."),
       curso: z.string().min(1, "Por favor, selecione um curso."),
+      turmaPeriodo: z.string().min(1, "Informe sua turma ou período."),
     });
   }
 
@@ -89,6 +90,7 @@ const getPerfilSchema = (isDiscente: boolean) => {
     telefone: z.string().optional(),
     dataNascimento: z.string().optional(),
     curso: z.string().optional(),
+    turmaPeriodo: z.string().optional(),
   });
 };
 
@@ -121,6 +123,7 @@ export function CompletarPerfil() {
           ? aplicarMascaraTelefone(session.telefone)
           : "",
         curso: session.curso || "",
+        turmaPeriodo: session.turmaPeriodo || "",
         dataNascimento: session.dataNascimento
           ? session.dataNascimento.split("T")[0]
           : "",
@@ -145,6 +148,7 @@ export function CompletarPerfil() {
         numeroRg: data.rg.replace(/\D/g, ""),
         dataNascimento: data.dataNascimento || null,
         curso: data.curso || null,
+        turmaPeriodo: data.turmaPeriodo || null,
       };
 
       const response = await fetch(
@@ -174,6 +178,7 @@ export function CompletarPerfil() {
         numeroCpf: payload.numeroCpf,
         dataNascimento: data.dataNascimento,
         curso: data.curso,
+        turmaPeriodo: data.turmaPeriodo,
       };
 
       save(updatedUser);
@@ -282,7 +287,13 @@ export function CompletarPerfil() {
                 {...register("dataNascimento")}
               />
             )}
-
+{/* CAMPO ADICIONADO AQUI */}
+    <InputForm
+      label="Turma / Período"
+      placeholder="Ex: 5º Período"
+      error={errors.turmaPeriodo?.message}
+      {...register("turmaPeriodo")}
+    />
             {isDiscente && (
               <SelectForm
                 label="Curso"

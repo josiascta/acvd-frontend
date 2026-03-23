@@ -8,6 +8,8 @@ import { SolicitacaoIndividual } from "../pages/SolicitacaoIndividual";
 import { MinhaRequisicao } from "../pages/MinhaRequisicao";
 import { DetalhesIndividual } from "../pages/DetalhesIndividual"; 
 import { FormularioRelatorio } from "../pages/FormularioRelatorio";
+import { TermoRespo } from "../pages/TermoRespo";
+
 
 export function DiscenteRoutes() {
   return (
@@ -21,6 +23,8 @@ export function DiscenteRoutes() {
         
         <Route path="minha-solicitacao-individual/:id" element={<DetalhesIndividual />} />
         
+        <Route path="termo-responsabilidade" element={<TermoRespo />} />
+
         <Route path="minha-requisicao/:id" element={<MinhaRequisicao />} />
         
       </Route>

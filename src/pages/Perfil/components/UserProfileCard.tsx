@@ -90,6 +90,12 @@ export function UserProfileCard({ session }: UserProfileCardProps) {
                 value={session.telefone || "Não informado"}
               />
             )}
+            {session.role === "DISCENTE" && (
+              <InfoBlock 
+                label="Turma / Período" 
+                value={session.turmaPeriodo || "Não Informado"} 
+              />
+            )}
 
             {session.role === "DISCENTE" && (
               <div className="flex flex-col p-4 bg-[#008060]/5 rounded-2xl border border-[#008060]/10 sm:col-span-2">
