@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { formatarData } from "../../../utils/date";
 import { handleViewDocument } from "../../../utils/api";
 import { useDocumentoUsuario } from "../../../hooks/useDocumentoUsuario";
+import type { UserResponse } from "../../../dtos/user";
 
 interface UserProfileCardProps {
   session: UserResponse;
