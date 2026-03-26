@@ -6,27 +6,31 @@ import { Perfil } from "../pages/Perfil";
 import { CompletarPerfil } from "../pages/CompletarPerfil";
 import { SolicitacaoIndividual } from "../pages/SolicitacaoIndividual";
 import { MinhaRequisicao } from "../pages/MinhaRequisicao";
-import { DetalhesIndividual } from "../pages/DetalhesIndividual"; 
+import { DetalhesIndividual } from "../pages/DetalhesIndividual";
 import { FormularioRelatorio } from "../pages/FormularioRelatorio";
-import { TermoRespo } from "../pages/TermoRespo";
-
 
 export function DiscenteRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
-        <Route index element={<Home />} /> 
+        <Route index element={<Home />} />
         <Route path="perfil" element={<Perfil />} />
         <Route path="completar-perfil" element={<CompletarPerfil />} />
-        <Route path="solicitacao-individual" element={<SolicitacaoIndividual />} />
-        <Route path="relatorio-discente/preencher/:id" element={<FormularioRelatorio />} />
-        
-        <Route path="minha-solicitacao-individual/:id" element={<DetalhesIndividual />} />
-        
-        <Route path="termo-responsabilidade" element={<TermoRespo />} />
+        <Route
+          path="solicitacao-individual"
+          element={<SolicitacaoIndividual />}
+        />
+        <Route
+          path="relatorio-discente/preencher/:id"
+          element={<FormularioRelatorio />}
+        />
+
+        <Route
+          path="minha-solicitacao-individual/:id"
+          element={<DetalhesIndividual />}
+        />
 
         <Route path="minha-requisicao/:id" element={<MinhaRequisicao />} />
-        
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

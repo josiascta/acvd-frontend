@@ -32,23 +32,51 @@ export function DetalhesViagem() {
     null,
   );
 
-  // Estados Modal Reprovação
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-  const [reqToReject, setReqToReject] = useState<RequisicaoDetalhesDTO | null>(
-    null,
-  );
-  const [rejectReasons, setRejectReasons] = useState<string[]>([]);
-  const [otherRejectReason, setOtherRejectReason] = useState("");
+  // Estados Modal de Validação (Substitui Aprovação/Reprovação rápida)
+  const [isValidateModalOpen, setIsValidateModalOpen] = useState(false);
+  const [reqToValidate, setReqToValidate] =
+    useState<RequisicaoDetalhesDTO | null>(null);
+  const [checkedItems, setCheckedItems] = useState<string[]>([]);
+  const [otherObservation, setOtherObservation] = useState("");
 
   const [submittingEval, setSubmittingEval] = useState(false);
 
-  const predefinedReasons = [
-    "Documento de identificação do discente ilegível ou incorreto",
-    "Termo de Compromisso (Anexo V) ausente ou preenchido incorretamente",
-    "Documento de autorização/identificação do responsável legal ilegível ou incorreto",
-    "Informações do responsável legal estão divergentes ou incompletas",
-    "Dados pessoais do discente (nome, CPF, RG, etc.) divergentes da documentação",
-    "Falta de assinatura ou formatação inválida nos documentos exigidos",
+  // Itens de validação POSITIVA (O que está correto) com suas mensagens de ERRO correspondentes
+  const validationItems = [
+    {
+      id: "doc_discente",
+      label: "Documento de identificação do discente correto e legível",
+      errorMsg: "Documento de identificação do discente ilegível ou incorreto",
+    },
+    {
+      id: "doc_responsavel",
+      label: "Documento do responsável legal correto e legível",
+      errorMsg: "Documento do responsável legal ilegível ou incorreto",
+    },
+
+    {
+      id: "info_responsavel",
+      label: "Informações do responsável legal consistentes e completas",
+      errorMsg:
+        "Informações do responsável legal estão divergentes ou incompletas",
+    },
+    {
+      id: "dados_pessoais",
+      label: "Dados pessoais do discente compatíveis com a documentação",
+      errorMsg: "Dados pessoais do discente divergentes da documentação",
+    },
+    {
+      id: "assinaturas",
+      label: "Assinaturas e formatação dos documentos válidas",
+      errorMsg:
+        "Falta de assinatura ou formatação inválida nos documentos exigidos",
+    },
+    {
+      id: "anexo_v",
+      label: "Termo de Compromisso (Anexo V) preenchido corretamente",
+      errorMsg:
+        "Termo de Compromisso (Anexo V) ausente ou preenchido incorretamente",
+    },
   ];
 
   useEffect(() => {
@@ -93,101 +121,186 @@ export function DetalhesViagem() {
   const handleAddAluno = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddLoading(true);
+
+    const emails = addForm.emailDiscente
+      .split("\n")
+      .map((email) => email.trim())
+      .filter((email) => email !== "");
+
+    if (emails.length === 0) {
+      alert("Por favor, insira pelo menos um e-mail válido.");
+      setAddLoading(false);
+      return;
+    }
+
     try {
-      const payload = {
-        emailDiscente: addForm.emailDiscente,
-        valorDiaria: 0, // Removido do Front, enviado 0 para não quebrar API
-        inscricaoValor: 0, // Removido do Front, enviado 0
-      };
+      const promises = emails.map(async (email) => {
+        const payload = {
+          emailDiscente: email,
+          valorDiaria: 0,
+          inscricaoValor: 0,
+        };
 
-      const res = await fetch(
-        `${API_URL}/requisicoes/viagens/${id}/adicionar-discente/email`,
-        {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify(payload),
-        },
-      );
+        try {
+          const res = await fetch(
+            `${API_URL}/requisicoes/viagens/${id}/adicionar-discente/email`,
+            {
+              method: "POST",
+              headers: getHeaders(),
+              body: JSON.stringify(payload),
+            },
+          );
 
-      if (!res.ok) throw new Error("Erro ao adicionar aluno");
+          if (!res.ok) {
+            return { success: false, email };
+          }
+          return { success: true, email };
+        } catch (error) {
+          return { success: false, email };
+        }
+      });
 
-      setIsAddModalOpen(false);
-      setAddForm({ emailDiscente: "" });
-      fetchRequisicoes();
+      const results = await Promise.all(promises);
+
+      const sucessos = results.filter((r) => r.success);
+      const falhas = results.filter((r) => !r.success);
+
+      if (falhas.length > 0) {
+        const falhasEmails = falhas.map((f) => f.email).join("\n- ");
+        alert(
+          `Processo concluído com ressalvas:\n\n` +
+            `${sucessos.length} aluno(s) adicionado(s) com sucesso.\n\n` +
+            `Falha ao adicionar os seguintes e-mails:\n- ${falhasEmails}\n\n` +
+            `Motivo provável: O aluno não possui cadastro no sistema ou já está na viagem.`,
+        );
+      }
+
+      if (sucessos.length > 0 || falhas.length === 0) {
+        setIsAddModalOpen(false);
+        setAddForm({ emailDiscente: "" });
+        fetchRequisicoes();
+      }
     } catch (error) {
-      alert("Falha ao adicionar aluno. Verifique o e-mail.");
+      alert("Falha inesperada ao tentar adicionar alunos.");
     } finally {
       setAddLoading(false);
     }
   };
 
-  const handleQuickApprove = async (requisicaoId: string) => {
-    if (!window.confirm("Tem certeza que deseja APROVAR esta requisição?"))
-      return;
-
-    setSubmittingEval(true);
+  // --- NOVA FUNÇÃO: Baixar PDF Anexo IV ---
+  const handleDownloadAnexoIV = async () => {
     try {
       const res = await fetch(
-        `${API_URL}/requisicoes/${requisicaoId}/avaliar`,
+        `${API_URL}/api/pdf/viagens/${id}/discentes-participantes`,
         {
-          method: "PATCH",
+          method: "GET",
           headers: getHeaders(),
-          body: JSON.stringify({ status: "APROVADA", motivoReprovacao: null }),
         },
       );
 
-      if (!res.ok) throw new Error("Erro ao aprovar");
-      fetchRequisicoes();
-    } catch (err) {
-      alert("Falha ao aprovar requisição.");
-    } finally {
-      setSubmittingEval(false);
-    }
-  };
+      if (!res.ok) {
+        throw new Error("Erro ao baixar o arquivo");
+      }
 
-  const openRejectModal = (req: RequisicaoDetalhesDTO) => {
-    setReqToReject(req);
-    setRejectReasons([]);
-    setOtherRejectReason("");
-    setIsRejectModalOpen(true);
-  };
+      // Converte a resposta em um Blob (arquivo)
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
 
-  const submitReject = async () => {
-    if (!reqToReject) return;
-
-    let finalMotivo = rejectReasons.filter((r) => r !== "Outro").join(" | ");
-    if (rejectReasons.includes("Outro") && otherRejectReason.trim() !== "") {
-      finalMotivo += finalMotivo
-        ? ` | Outro: ${otherRejectReason.trim()}`
-        : `Outro: ${otherRejectReason.trim()}`;
-    }
-
-    if (finalMotivo.trim() === "") {
-      alert("Por favor, selecione ou digite um motivo para a reprovação.");
-      return;
-    }
-
-    setSubmittingEval(true);
-    try {
-      const res = await fetch(
-        `${API_URL}/requisicoes/${reqToReject.requisicaoId}/avaliar`,
-        {
-          method: "PATCH",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            status: "REPROVADO",
-            motivoReprovacao: finalMotivo,
-          }),
-        },
+      // Cria um link temporário para forçar o download
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `Anexo_IV_Discentes_Participantes_${id}.pdf`,
       );
+      document.body.appendChild(link);
+      link.click();
 
-      if (!res.ok) throw new Error("Erro ao reprovar");
+      // Limpeza
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar Anexo IV:", error);
+      alert(
+        "Falha ao baixar o documento. Verifique se há alunos na viagem ou tente novamente mais tarde.",
+      );
+    }
+  };
 
-      setIsRejectModalOpen(false);
-      setReqToReject(null);
+  const openValidateModal = (req: RequisicaoDetalhesDTO) => {
+    setReqToValidate(req);
+    setCheckedItems([]); // Inicia vazio para o professor fazer a checagem
+    setOtherObservation("");
+    setIsValidateModalOpen(true);
+  };
+
+  const handleSelectAll = () => {
+    if (checkedItems.length === validationItems.length) {
+      setCheckedItems([]);
+    } else {
+      setCheckedItems(validationItems.map((item) => item.id));
+    }
+  };
+
+  const submitValidation = async () => {
+    if (!reqToValidate) return;
+    setSubmittingEval(true);
+
+    const isAllChecked = checkedItems.length === validationItems.length;
+
+    try {
+      if (isAllChecked) {
+        // APROVAR
+        const res = await fetch(
+          `${API_URL}/requisicoes/${reqToValidate.requisicaoId}/avaliar`,
+          {
+            method: "PATCH",
+            headers: getHeaders(),
+            body: JSON.stringify({
+              status: "APROVADA",
+              motivoReprovacao: null,
+            }),
+          },
+        );
+        if (!res.ok) throw new Error("Erro ao aprovar");
+      } else {
+        // REPROVAR
+        // Identificar o que NÃO foi marcado para criar o motivo da reprovação
+        const missingItems = validationItems.filter(
+          (item) => !checkedItems.includes(item.id),
+        );
+
+        let finalMotivo = missingItems.map((item) => item.errorMsg).join(" | ");
+
+        if (otherObservation.trim() !== "") {
+          finalMotivo += finalMotivo
+            ? ` | Outras observações: ${otherObservation.trim()}`
+            : `Outras observações: ${otherObservation.trim()}`;
+        }
+
+        if (finalMotivo.trim() === "") {
+          finalMotivo = "Documentação incompleta ou inválida.";
+        }
+
+        const res = await fetch(
+          `${API_URL}/requisicoes/${reqToValidate.requisicaoId}/avaliar`,
+          {
+            method: "PATCH",
+            headers: getHeaders(),
+            body: JSON.stringify({
+              status: "REPROVADO",
+              motivoReprovacao: finalMotivo,
+            }),
+          },
+        );
+        if (!res.ok) throw new Error("Erro ao reprovar");
+      }
+
+      setIsValidateModalOpen(false);
+      setReqToValidate(null);
       fetchRequisicoes();
     } catch (err) {
-      alert("Falha ao reprovar requisição.");
+      alert("Falha ao avaliar requisição.");
     } finally {
       setSubmittingEval(false);
     }
@@ -240,10 +353,13 @@ export function DetalhesViagem() {
     return idade < 18;
   };
 
-  const requisicoesFiltradas = requisicoes.filter((req) => {
-    if (statusFilter === "TODOS") return true;
-    return req.status === statusFilter;
-  });
+  // Filtragem e Ordenação Alfabética
+  const requisicoesFiltradas = requisicoes
+    .filter((req) => {
+      if (statusFilter === "TODOS") return true;
+      return req.status === statusFilter;
+    })
+    .sort((a, b) => a.discente.nome.localeCompare(b.discente.nome));
 
   return (
     <div className="flex-grow w-full bg-[#f9fafb] min-h-[calc(100vh-64px)] pb-12">
@@ -278,7 +394,11 @@ export function DetalhesViagem() {
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => setActiveTab("DOCUMENTOS")}
-              className={`${activeTab === "DOCUMENTOS" ? "border-[#008060] text-[#008060]" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors`}
+              className={`${
+                activeTab === "DOCUMENTOS"
+                  ? "border-[#008060] text-[#008060]"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors`}
             >
               <span className="material-symbols-outlined text-[18px]">
                 folder
@@ -287,7 +407,11 @@ export function DetalhesViagem() {
             </button>
             <button
               onClick={() => setActiveTab("ALUNOS")}
-              className={`${activeTab === "ALUNOS" ? "border-[#008060] text-[#008060]" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors`}
+              className={`${
+                activeTab === "ALUNOS"
+                  ? "border-[#008060] text-[#008060]"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors`}
             >
               <span className="material-symbols-outlined text-[18px]">
                 groups
@@ -315,12 +439,12 @@ export function DetalhesViagem() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => alert("Em breve: Visualizar PDF")}
+                  onClick={() => alert("Em breve: Editar PDF")}
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  title="Visualizar"
+                  title="Editar"
                 >
                   <span className="material-symbols-outlined text-[20px]">
-                    visibility
+                    edit
                   </span>
                 </button>
                 <button
@@ -350,12 +474,12 @@ export function DetalhesViagem() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => alert("Em breve: Visualizar PDF")}
+                  onClick={() => alert("Em breve: Editar PDF")}
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                  title="Visualizar"
+                  title="Editar"
                 >
                   <span className="material-symbols-outlined text-[20px]">
-                    visibility
+                    edit
                   </span>
                 </button>
                 <button
@@ -373,32 +497,24 @@ export function DetalhesViagem() {
             {/* ANEXO IV (Automático) */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-shadow">
               <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-emerald-500 text-3xl">
-                  list_alt
+                <span className="material-symbols-outlined text-blue-500 text-3xl">
+                  description
                 </span>
                 <div>
                   <h4 className="font-bold text-slate-900">ANEXO IV</h4>
                   <p className="text-xs text-slate-500 font-medium">
                     DISCENTES PARTICIPANTES DA VISITA TÉCNICA/ATIVIDADE DE CAMPO
                   </p>
-                  <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                  <p className="text-[10px] text-blue-600 font-semibold mt-0.5">
                     Gerado automaticamente
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {/* --- BOTÃO ATUALIZADO PARA BAIXAR ANEXO IV --- */}
                 <button
-                  onClick={() => alert("Em breve: Visualizar PDF")}
-                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
-                  title="Visualizar"
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    visibility
-                  </span>
-                </button>
-                <button
-                  onClick={() => alert("Em breve: Baixar PDF")}
-                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                  onClick={handleDownloadAnexoIV}
+                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   title="Baixar"
                 >
                   <span className="material-symbols-outlined text-[20px]">
@@ -494,11 +610,12 @@ export function DetalhesViagem() {
                         </p>
                       </div>
 
-                      {/* 2. Central de Documentos */}
+                      {/* 2. Central de Documentos (Nova Ordem) */}
                       <div className="flex flex-wrap items-start justify-center gap-6 bg-slate-50 px-5 py-3 rounded-lg border border-slate-100 min-w-fit">
+                        {/* 2.1 Doc. do Estudante */}
                         <div className="flex flex-col items-center justify-between min-h-[44px]">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                            Identidade
+                            Doc. do Estudante
                           </span>
                           {req.documentoDiscente ? (
                             <div className="flex items-center gap-1">
@@ -513,20 +630,6 @@ export function DetalhesViagem() {
                                   visibility
                                 </span>
                               </button>
-                              <button
-                                onClick={() =>
-                                  handleDownloadDocument(
-                                    req.documentoDiscente!.id,
-                                    req.documentoDiscente!.nomeOriginal,
-                                  )
-                                }
-                                title="Baixar"
-                                className="text-blue-600 hover:bg-blue-100 p-1 rounded-md transition-colors"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  download
-                                </span>
-                              </button>
                             </div>
                           ) : (
                             <span className="text-[11px] text-slate-400 font-medium py-1">
@@ -535,20 +638,11 @@ export function DetalhesViagem() {
                           )}
                         </div>
 
-                        {/* Anexo V Padronizado */}
-                        <div className="flex flex-col items-center justify-between min-h-[44px] border-l border-slate-200 pl-6">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                            Anexo V
-                          </span>
-                          <span className="text-[11px] text-slate-400 font-medium py-1">
-                            Pendente
-                          </span>
-                        </div>
-
+                        {/* 2.2 Doc. Responsável legal */}
                         {menorDeIdade && (
                           <div className="flex flex-col items-center justify-between min-h-[44px] border-l border-slate-200 pl-6">
-                            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-                              Responsável legal
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                              Doc. Responsável legal
                             </span>
                             {req.responsavelLegal?.documento ? (
                               <div className="flex items-center gap-1">
@@ -559,25 +653,10 @@ export function DetalhesViagem() {
                                     )
                                   }
                                   title="Visualizar"
-                                  className="text-amber-600 hover:bg-amber-100 p-1 rounded-md transition-colors"
+                                  className="text-blue-600 hover:bg-amber-100 p-1 rounded-md transition-colors"
                                 >
                                   <span className="material-symbols-outlined text-[18px]">
                                     visibility
-                                  </span>
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleDownloadDocument(
-                                      req.responsavelLegal!.documento!.id,
-                                      req.responsavelLegal!.documento!
-                                        .nomeOriginal,
-                                    )
-                                  }
-                                  title="Baixar"
-                                  className="text-amber-600 hover:bg-amber-100 p-1 rounded-md transition-colors"
-                                >
-                                  <span className="material-symbols-outlined text-[18px]">
-                                    download
                                   </span>
                                 </button>
                               </div>
@@ -588,48 +667,39 @@ export function DetalhesViagem() {
                             )}
                           </div>
                         )}
+
+                        {/* 2.3 ANEXO V */}
+                        <div className="flex flex-col items-center justify-between min-h-[44px] border-l border-slate-200 pl-6">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                            ANEXO V
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-medium py-1">
+                            Pendente
+                          </span>
+                        </div>
                       </div>
 
-                      {/* 3. Ações Rápidas */}
-                      <div className="flex items-center justify-end gap-1 xl:border-l xl:border-slate-100 xl:pl-4">
+                      {/* 3. Ações Rápidas (Botão Validar) */}
+                      <div className="flex items-center justify-end gap-2 xl:border-l xl:border-slate-100 xl:pl-4">
                         <button
-                          onClick={() => openRejectModal(req)}
+                          onClick={() => openValidateModal(req)}
                           disabled={submittingEval || isAguardandoEnvio}
                           title={
                             isAguardandoEnvio
                               ? "Aguardando envio do aluno"
-                              : "Reprovar Requisição"
+                              : "Validar Documentação"
                           }
-                          className={`p-2 rounded-full transition-all flex items-center justify-center 
+                          className={`px-3 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 text-sm font-semibold border
                             ${
                               isAguardandoEnvio || submittingEval
-                                ? "text-slate-300 cursor-not-allowed"
-                                : "text-red-500 hover:text-red-700 hover:bg-red-50"
+                                ? "bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed"
+                                : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
                             }`}
                         >
-                          <span className="material-symbols-outlined text-[22px]">
-                            thumb_down
+                          <span className="material-symbols-outlined text-[18px]">
+                            fact_check
                           </span>
-                        </button>
-
-                        <button
-                          onClick={() => handleQuickApprove(req.requisicaoId)}
-                          disabled={submittingEval || isAguardandoEnvio}
-                          title={
-                            isAguardandoEnvio
-                              ? "Aguardando envio do aluno"
-                              : "Aprovar Requisição"
-                          }
-                          className={`p-2 rounded-full transition-all flex items-center justify-center 
-                            ${
-                              isAguardandoEnvio || submittingEval
-                                ? "text-slate-300 cursor-not-allowed"
-                                : "text-green-500 hover:text-green-700 hover:bg-green-50"
-                            }`}
-                        >
-                          <span className="material-symbols-outlined text-[22px]">
-                            thumb_up
-                          </span>
+                          Validar
                         </button>
 
                         <button
@@ -645,7 +715,7 @@ export function DetalhesViagem() {
                         <button
                           onClick={() => handleDeleteAluno(req.requisicaoId)}
                           title="Remover Aluno da Viagem"
-                          className="text-slate-300 hover:text-red-600 hover:bg-red-50 p-2 ml-1 rounded-full transition-all flex items-center justify-center"
+                          className="text-slate-300 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-all flex items-center justify-center"
                         >
                           <span className="material-symbols-outlined text-[22px]">
                             delete
@@ -685,18 +755,21 @@ export function DetalhesViagem() {
             <form onSubmit={handleAddAluno} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  E-mail do Discente
+                  E-mails dos Discentes (um por linha)
                 </label>
-                <input
-                  type="email"
+                <textarea
                   required
+                  rows={5}
                   value={addForm.emailDiscente}
                   onChange={(e) =>
                     setAddForm({ ...addForm, emailDiscente: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  placeholder="aluno@academico.ifpb.edu.br"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-[#008060] focus:border-[#008060] outline-none transition-colors"
+                  placeholder="aluno1@academico.ifpb.edu.br&#10;aluno2@academico.ifpb.edu.br&#10;aluno3@academico.ifpb.edu.br"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  Cole os e-mails separados por quebra de linha.
+                </p>
               </div>
               <div className="pt-4 flex gap-3 justify-end">
                 <button
@@ -794,27 +867,27 @@ export function DetalhesViagem() {
                     <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
                       Responsável legal
                     </h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm bg-amber-50 p-4 rounded-lg border border-amber-200">
+                    <div className="grid grid-cols-2 gap-2 text-sm bg-slate-50 p-4 rounded-lg border border-slate-200">
                       <div>
-                        <span className="font-semibold text-amber-800">
+                        <span className="font-semibold text-slate-700">
                           Nome:
                         </span>{" "}
                         {selectedReq.responsavelLegal.nome}
                       </div>
                       <div>
-                        <span className="font-semibold text-amber-800">
+                        <span className="font-semibold text-slate-700">
                           CPF:
                         </span>{" "}
                         {selectedReq.responsavelLegal.cpf}
                       </div>
                       <div>
-                        <span className="font-semibold text-amber-800">
+                        <span className="font-semibold text-slate-700">
                           Contato:
                         </span>{" "}
                         {selectedReq.responsavelLegal.contato}
                       </div>
                       <div>
-                        <span className="font-semibold text-amber-800">
+                        <span className="font-semibold text-slate-700">
                           RG:
                         </span>{" "}
                         {selectedReq.responsavelLegal.rg}
@@ -861,94 +934,127 @@ export function DetalhesViagem() {
         </div>
       )}
 
-      {/* --- MODAL: Reprovação --- */}
-      {isRejectModalOpen && (
+      {/* --- MODAL: Validação (Aprovar/Reprovar Inteligente) --- */}
+      {isValidateModalOpen && reqToValidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-red-700 flex items-center gap-1">
-                <span className="material-symbols-outlined">warning</span>{" "}
-                Motivo da Reprovação
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600">
+                  fact_check
+                </span>
+                Validar Documentação
               </h3>
               <button
-                onClick={() => setIsRejectModalOpen(false)}
+                onClick={() => setIsValidateModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <div className="p-6">
-              <p className="text-sm text-slate-600 mb-4 font-medium">
-                Selecione o que há de errado com a documentação do aluno:
+            <div className="p-6 overflow-y-auto">
+              <p className="text-sm text-slate-600 mb-4">
+                Marque os itens que estão <strong>corretos</strong> na
+                documentação de <strong>{reqToValidate.discente.nome}</strong>.
               </p>
 
-              <div className="space-y-3 mb-4">
-                {predefinedReasons.map((reason) => (
+              <button
+                onClick={handleSelectAll}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-800 mb-4 flex items-center gap-1 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  {checkedItems.length === validationItems.length
+                    ? "deselect"
+                    : "checklist"}
+                </span>
+                {checkedItems.length === validationItems.length
+                  ? "Desmarcar todos"
+                  : "Selecionar todos"}
+              </button>
+
+              <div className="space-y-3 mb-6">
+                {validationItems.map((item) => (
                   <label
-                    key={reason}
-                    className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+                    key={item.id}
+                    className="flex items-start gap-3 text-sm text-slate-700 cursor-pointer p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
                   >
                     <input
                       type="checkbox"
-                      className="rounded text-red-600 focus:ring-red-500 w-4 h-4"
-                      checked={rejectReasons.includes(reason)}
+                      className="mt-0.5 rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                      checked={checkedItems.includes(item.id)}
                       onChange={(e) => {
                         if (e.target.checked)
-                          setRejectReasons([...rejectReasons, reason]);
+                          setCheckedItems([...checkedItems, item.id]);
                         else
-                          setRejectReasons(
-                            rejectReasons.filter((r) => r !== reason),
+                          setCheckedItems(
+                            checkedItems.filter((id) => id !== item.id),
                           );
                       }}
                     />
-                    {reason}
+                    <span
+                      className={
+                        checkedItems.includes(item.id)
+                          ? "text-slate-900 font-medium"
+                          : "text-slate-600"
+                      }
+                    >
+                      {item.label}
+                    </span>
                   </label>
                 ))}
+              </div>
 
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="rounded text-red-600 focus:ring-red-500 w-4 h-4"
-                    checked={rejectReasons.includes("Outro")}
-                    onChange={(e) => {
-                      if (e.target.checked)
-                        setRejectReasons([...rejectReasons, "Outro"]);
-                      else
-                        setRejectReasons(
-                          rejectReasons.filter((r) => r !== "Outro"),
-                        );
-                    }}
+              {/* Só exibe o campo de observação extra se tiver alguma coisa desmarcada */}
+              {checkedItems.length !== validationItems.length && (
+                <div className="animate-fade-in border-t border-slate-100 pt-4">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Outras observações / Motivos de reprovação:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={otherObservation}
+                    onChange={(e) => setOtherObservation(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                    placeholder="Se houver algo mais a corrigir além dos itens desmarcados acima, descreva aqui..."
                   />
-                  Outro motivo
-                </label>
-              </div>
-
-              {rejectReasons.includes("Outro") && (
-                <textarea
-                  rows={3}
-                  value={otherRejectReason}
-                  onChange={(e) => setOtherRejectReason(e.target.value)}
-                  className="w-full px-3 py-2 border border-red-300 rounded-lg text-sm focus:ring-red-500 focus:border-red-500 transition-all mb-4"
-                  placeholder="Descreva o motivo da reprovação detalhadamente..."
-                />
+                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1 font-medium">
+                    <span className="material-symbols-outlined text-[16px]">
+                      warning
+                    </span>
+                    A requisição será REPROVADA e o aluno receberá um aviso do
+                    que precisa consertar.
+                  </p>
+                </div>
               )}
+            </div>
 
-              <div className="pt-4 flex gap-3 justify-end border-t border-slate-100 mt-2">
-                <button
-                  onClick={() => setIsRejectModalOpen(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={submitReject}
-                  disabled={submittingEval || rejectReasons.length === 0}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 transition-colors"
-                >
-                  Confirmar Reprovação
-                </button>
-              </div>
+            <div className="p-4 border-t border-slate-100 flex gap-3 justify-end bg-slate-50">
+              <button
+                onClick={() => setIsValidateModalOpen(false)}
+                className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={submitValidation}
+                disabled={submittingEval}
+                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-50 transition-colors flex items-center gap-2
+                  ${
+                    checkedItems.length === validationItems.length
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-red-600 hover:bg-red-700"
+                  }`}
+              >
+                {submittingEval ? (
+                  <span className="material-symbols-outlined animate-spin text-[18px]">
+                    progress_activity
+                  </span>
+                ) : null}
+                {checkedItems.length === validationItems.length
+                  ? "Aprovar Requisição"
+                  : "Reprovar Requisição"}
+              </button>
             </div>
           </div>
         </div>

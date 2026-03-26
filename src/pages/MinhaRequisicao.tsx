@@ -5,8 +5,10 @@ import { API_URL, getHeaders } from "../utils/api";
 export function MinhaRequisicao() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-const [showModal, setShowModal] = useState(false);
-const [dadosTemp, setDadosTemp] = useState({ nome: '', contato: '' });
+
+  const [showModal, setShowModal] = useState(false);
+  const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
+  const [dadosTemp, setDadosTemp] = useState({ nome: "", contato: "" });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [requisicao, setRequisicao] = useState<RequisicaoResumoDTO | null>(
@@ -40,6 +42,7 @@ const [dadosTemp, setDadosTemp] = useState({ nome: '', contato: '' });
 
   const handleConfirmarRequisicao = async () => {
     setSubmitting(true);
+    setShowConfirmSubmit(false);
     try {
       const res = await fetch(`${API_URL}/requisicoes/${id}/enviar`, {
         method: "PATCH",
@@ -54,11 +57,11 @@ const [dadosTemp, setDadosTemp] = useState({ nome: '', contato: '' });
       setRequisicao((prev) =>
         prev ? { ...prev, status: "AGUARDANDO_ANALISE" } : null,
       );
-      alert("Requisição enviada com sucesso!");
+      alert("Documentos enviados com sucesso!");
     } catch (error: any) {
       alert(
         error.message ||
-          "Falha ao enviar a requisição para análise. Verifique os seus documentos e dados bancários no perfil.",
+          "Falha ao enviar a requisição para análise. Verifique se anexou todos os documentos corretamente.",
       );
     } finally {
       setSubmitting(false);
@@ -80,70 +83,66 @@ const [dadosTemp, setDadosTemp] = useState({ nome: '', contato: '' });
 
     return { text, colorClass };
   };
- 
- const handleDownloadTermo = async (dados: RequisicaoResumoDTO, manual?: { nome: string, contato: string }) => {
-  try {
-    const viagemId = dados.viagemId;
-    const alunoId = dados.discenteId;
 
-    if (!viagemId || !alunoId) {
-      alert("Erro: Dados da viagem ou do discente não encontrados.");
+  const handleDownloadTermo = async (
+    dados: RequisicaoResumoDTO,
+    manual?: { nome: string; contato: string },
+  ) => {
+    try {
+      const viagemId = dados.viagemId;
+      const alunoId = dados.discenteId;
+
+      if (!viagemId || !alunoId) {
+        alert("Erro: Dados da viagem ou do discente não encontrados.");
+        return;
+      }
+
+      let urlFetch = `http://localhost:8080/solicitacoes-coletivas/${viagemId}/termo-individual/${alunoId}`;
+      if (manual?.nome) {
+        urlFetch += `?nomeResp=${encodeURIComponent(manual.nome)}&contatoResp=${encodeURIComponent(manual.contato)}`;
+      }
+
+      const response = await fetch(urlFetch, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          "Erro ao gerar o PDF. Verifique se os dados estão completos.",
+        );
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `Anexo_V_${dados.discenteNome?.replace(/\s+/g, "_") || "Termo"}.pdf`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
+  const confirmarESalvar = async () => {
+    if (!dadosTemp.nome || !dadosTemp.contato) {
+      alert("Por favor, preencha todos os campos do responsável.");
       return;
     }
-
-    // Monta a URL com os parâmetros do Modal, se existirem
-    let urlFetch = `http://localhost:8080/solicitacoes-coletivas/${viagemId}/termo-individual/${alunoId}`;
-    if (manual?.nome) {
-      urlFetch += `?nomeResp=${encodeURIComponent(manual.nome)}&contatoResp=${encodeURIComponent(manual.contato)}`;
+    setShowModal(false);
+    if (requisicao) {
+      handleDownloadTermo(requisicao, dadosTemp);
     }
+  };
 
-    const response = await fetch(urlFetch, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Erro ao gerar o PDF. Verifique se os dados do aluno e viagem estão completos.");
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `Anexo_V_${dados.discenteNome?.replace(/\s+/g, '_') || 'Termo'}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-
-  } catch (error: any) {
-    alert(error.message);
-  }
-};
-const handleBotaoBaixar = (requisicao: any) => {
-  // Se o DTO já veio com responsável, baixa direto. 
-  // Se não, abre a telinha.
-  if (!requisicao.responsavelLegal?.nome) {
-    setShowModal(true);
-  } else {
-    handleDownloadTermo(requisicao);
-  }
-};
-
-// 3. A função que o botão "Confirmar" de dentro da telinha chama
-const confirmarESalvar = async () => {
-  if (!dadosTemp.nome || !dadosTemp.contato) {
-    alert("Por favor, preencha todos os campos do responsável.");
-    return;
-  }
-  setShowModal(false);
-  // Passa a requisição atual e os dados digitados na telinha
-  if (requisicao) {
-    handleDownloadTermo(requisicao, dadosTemp);
-  }
-};
   const podeEnviar =
     requisicao?.status === "AGUARDANDO_ENVIO" ||
     requisicao?.status === "REPROVADO";
@@ -193,26 +192,32 @@ const confirmarESalvar = async () => {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* BOX REPROVAÇÃO - AGORA EM BULLETS */}
             {requisicao.status === "REPROVADO" &&
               requisicao.motivoReprovacao && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
-                  <h4 className="font-bold text-red-800 text-sm flex items-center gap-1 mb-1">
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm">
+                  <h4 className="font-bold text-red-800 text-sm flex items-center gap-1 mb-2">
                     <span className="material-symbols-outlined text-[18px]">
                       warning
                     </span>
-                    Motivo da Reprovação
+                    Sua requisição foi reprovada pelos seguintes motivos:
                   </h4>
-                  <p className="text-sm text-red-700">
-                    {requisicao.motivoReprovacao}
-                  </p>
-                  <p className="text-xs text-red-600 mt-2 italic">
-                    Corrija as pendências e envie a requisição novamente abaixo.
+                  <ul className="list-disc list-inside text-sm text-red-700 space-y-1 ml-1 font-medium">
+                    {requisicao.motivoReprovacao
+                      .split(" | ")
+                      .map((motivo, idx) => (
+                        <li key={idx}>{motivo.trim()}</li>
+                      ))}
+                  </ul>
+                  <p className="text-xs text-red-600 mt-3 italic">
+                    Corrija as pendências acima e envie seus documentos
+                    novamente.
                   </p>
                 </div>
               )}
 
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm min-h-[250px] flex flex-col">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 border-b border-slate-100 pb-4">
                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                   <span className="material-symbols-outlined text-slate-400">
                     folder
@@ -221,60 +226,80 @@ const confirmarESalvar = async () => {
                 </h3>
               </div>
 
+              {/* PASSO A PASSO EDUCATIVO */}
+              {podeEnviar && (
+                <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 mb-6">
+                  <h4 className="text-blue-800 font-bold text-sm mb-2 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[18px]">
+                      help
+                    </span>
+                    Passo a passo para envio do Anexo V:
+                  </h4>
+                  <ol className="list-decimal list-inside text-sm text-blue-700 space-y-1.5 ml-1">
+                    <li>
+                      Clique em <strong>"Baixar"</strong> para salvar o arquivo
+                      PDF no seu computador (preencha os dados do responsável,
+                      se solicitado).
+                    </li>
+                    <li>
+                      Assine o documento digitalmente utilizando o site oficial
+                      do <strong>gov.br</strong>, ou imprima e assine
+                      manualmente.
+                    </li>
+                    <li>
+                      Por fim, clique em <strong>"Enviar"</strong> para anexar o
+                      documento <strong>válido e assinado</strong>.
+                    </li>
+                  </ol>
+                </div>
+              )}
+
               <div className="space-y-4">
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-shadow">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-shadow">
                   <div className="flex items-start gap-3">
-                    <span className="material-symbols-outlined text-red-500 text-3xl mt-0.5">
+                    <span className="material-symbols-outlined text-slate-400 text-3xl mt-0.5">
                       description
                     </span>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-red-900">ANEXO V</h4>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-red-100 text-red-700 border-red-200">
+                        <h4 className="font-bold text-slate-800">ANEXO V</h4>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-amber-100 text-amber-700 border-amber-200">
                           Pendente
                         </span>
                       </div>
-                      <p className="text-xs text-red-800 font-medium max-w-lg mt-0.5">
-                        TERMO DE RESPONSABILIDADE E AUTORIZAÇÃO/CIÊNCIA
-                      </p>
-                      <p className="text-[11px] font-bold text-red-600 mt-1 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">
-                          error
-                        </span>
-                        Aviso: Enviar anexo assinado
+                      <p className="text-xs text-slate-600 font-medium max-w-lg mt-0.5">
+                        TERMO DE COMPROMISSO E RESPONSABILIDADE
                       </p>
                     </div>
                   </div>
 
+                  {/* BOTÕES SIMPLIFICADOS */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
-                      onClick={() =>
-                        alert("Em breve: Visualizar PDF em branco")
-                      }
-                      className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md transition-colors"
-                      title="Visualizar modelo"
+                      onClick={() => {
+                        // Se não tiver o nome do responsável, abre o modal para preencher antes de baixar
+                        if (requisicao.responsavelLegal?.nome) {
+                          handleDownloadTermo(requisicao);
+                        } else {
+                          setShowModal(true);
+                        }
+                      }}
+                      className="px-4 py-2 bg-blue-50 text-blue-700 font-semibold text-sm rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5"
                     >
-                      <span className="material-symbols-outlined text-[20px]">
-                        visibility
+                      <span className="material-symbols-outlined text-[18px]">
+                        download
                       </span>
+                      Baixar
                     </button>
-
-                <button
-                  onClick={() => handleBotaoBaixar(requisicao)} // MUDADO AQUI
-                  className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 font-semibold text-xs rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap shadow-sm flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[14px]">download</span>
-                  Baixar Anexo V
-                </button>
 
                     <button
                       onClick={() =>
                         alert("Em breve: Upload do documento assinado.")
                       }
-                      className="flex items-center gap-1 ml-1 px-3 py-1.5 bg-red-600 text-white font-semibold text-xs rounded-md hover:bg-red-700 transition-colors shadow-sm"
+                      className="px-4 py-2 bg-blue-50 text-blue-700 font-semibold text-sm rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5"
                       title="Fazer upload do anexo assinado"
                     >
-                      <span className="material-symbols-outlined text-[16px]">
+                      <span className="material-symbols-outlined text-[18px]">
                         upload_file
                       </span>
                       Enviar
@@ -286,7 +311,7 @@ const confirmarESalvar = async () => {
 
             <div className="flex justify-end pt-4">
               <button
-                onClick={handleConfirmarRequisicao}
+                onClick={() => setShowConfirmSubmit(true)}
                 disabled={submitting || !podeEnviar}
                 className={`px-6 py-3 rounded-lg text-sm font-bold shadow-sm transition-all flex items-center gap-2 
                   ${
@@ -302,7 +327,7 @@ const confirmarESalvar = async () => {
                 )}
 
                 {podeEnviar
-                  ? "Confirmar e Enviar Requisição"
+                  ? "Enviar Documentos"
                   : requisicao.status === "AGUARDANDO_ANALISE"
                     ? "Em Análise pelo Servidor"
                     : requisicao.status === "APROVADA"
@@ -310,39 +335,101 @@ const confirmarESalvar = async () => {
                       : "Indisponível"}
               </button>
             </div>
+
+            {/* MODAL DE DADOS DO RESPONSÁVEL */}
             {showModal && (
-  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 border border-slate-200">
-      <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
-        <span className="material-symbols-outlined text-blue-600">family_restroom</span>
-        Dados do Responsável
-      </h3>
-      <p className="text-xs text-slate-500 mb-4">
-        Precisamos desses dados para preencher o **Anexo V** da sua viagem.
-      </p>
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 border border-slate-200">
+                  <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-blue-600">
+                      family_restroom
+                    </span>
+                    Dados do Responsável
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Precisamos desses dados para preencher o **Anexo V** da sua
+                    viagem antes de você poder baixar o PDF.
+                  </p>
 
-      <div className="space-y-3">
-        <input 
-          className="w-full p-2 text-sm border rounded-md outline-blue-500"
-          placeholder="Nome do Responsável"
-          onChange={(e) => setDadosTemp({...dadosTemp, nome: e.target.value})}
-        />
-        <input 
-          className="w-full p-2 text-sm border rounded-md outline-blue-500"
-          placeholder="Telefone/Contato"
-          onChange={(e) => setDadosTemp({...dadosTemp, contato: e.target.value})}
-        />
-      </div>
+                  <div className="space-y-3">
+                    <input
+                      className="w-full p-2 text-sm border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                      placeholder="Nome do Responsável"
+                      onChange={(e) =>
+                        setDadosTemp({ ...dadosTemp, nome: e.target.value })
+                      }
+                    />
+                    <input
+                      className="w-full p-2 text-sm border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                      placeholder="Telefone/Contato"
+                      onChange={(e) =>
+                        setDadosTemp({ ...dadosTemp, contato: e.target.value })
+                      }
+                    />
+                  </div>
 
-      <div className="flex justify-end gap-2 mt-6">
-        <button onClick={() => setShowModal(false)} className="px-3 py-1.5 text-xs text-slate-500 font-bold">Cancelar</button>
-        <button onClick={confirmarESalvar} className="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-md font-bold shadow-lg">Gerar PDF</button>
-      </div>
-    </div>
-  </div>
-)}
+                  <div className="flex justify-end gap-3 mt-6">
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2 text-sm text-slate-600 font-bold hover:bg-slate-100 rounded-lg transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={confirmarESalvar}
+                      className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition-colors"
+                    >
+                      Salvar e Continuar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL DE CONFIRMAÇÃO DE ENVIO */}
+            {showConfirmSubmit && (
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="bg-amber-100 text-amber-600 p-3 rounded-full flex-shrink-0">
+                      <span className="material-symbols-outlined text-3xl">
+                        help
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">
+                        Confirmar envio
+                      </h3>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Você tem certeza que quer enviar seus documentos para
+                        análise?
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-xs text-slate-600 mb-6">
+                    Certifique-se de que o <strong>Anexo V</strong> foi assinado
+                    pelo gov.br e anexado corretamente. Após o envio, você não
+                    poderá alterar os arquivos até o servidor responder.
+                  </div>
+
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowConfirmSubmit(false)}
+                      className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleConfirmarRequisicao}
+                      className="px-5 py-2.5 text-sm bg-[#008060] hover:bg-[#006048] text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2"
+                    >
+                      Sim, enviar documentos
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-          
         )}
       </main>
     </div>
