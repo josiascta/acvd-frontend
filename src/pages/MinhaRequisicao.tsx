@@ -123,8 +123,7 @@ const [dadosTemp, setDadosTemp] = useState({ nome: '', contato: '' });
   }
 };
 const handleBotaoBaixar = (requisicao: any) => {
-  // Se o DTO já veio com responsável, baixa direto. 
-  // Se não, abre a telinha.
+  
   if (!requisicao.responsavelLegal?.nome) {
     setShowModal(true);
   } else {
@@ -132,14 +131,14 @@ const handleBotaoBaixar = (requisicao: any) => {
   }
 };
 
-// 3. A função que o botão "Confirmar" de dentro da telinha chama
+
 const confirmarESalvar = async () => {
   if (!dadosTemp.nome || !dadosTemp.contato) {
     alert("Por favor, preencha todos os campos do responsável.");
     return;
   }
   setShowModal(false);
-  // Passa a requisição atual e os dados digitados na telinha
+ 
   if (requisicao) {
     handleDownloadTermo(requisicao, dadosTemp);
   }
@@ -260,7 +259,7 @@ const confirmarESalvar = async () => {
                     </button>
 
                 <button
-                  onClick={() => handleBotaoBaixar(requisicao)} // MUDADO AQUI
+                  onClick={() => handleBotaoBaixar(requisicao)} 
                   className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 font-semibold text-xs rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap shadow-sm flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-[14px]">download</span>
