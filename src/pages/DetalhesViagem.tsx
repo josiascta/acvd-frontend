@@ -187,6 +187,45 @@ export function DetalhesViagem() {
     }
   };
 
+  const handleDownloadAnexoI = async () => {
+    // Busca o ID do anexo que foi salvo no localStorage após o preenchimento
+    const anexoIId = localStorage.getItem(`anexoI_${id}`);
+
+    if (!anexoIId) {
+      alert("Você precisa preencher (Editar) o Anexo I antes de baixá-lo.");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_URL}/solicitacoes-coletivas/${anexoIId}/download`,
+        {
+          method: "GET",
+          headers: getHeaders(),
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("Arquivo não encontrado no servidor.");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Anexo_I_Viagem_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar Anexo I:", error);
+      alert(
+        "Falha ao baixar o Anexo I. Verifique se o documento já foi gerado.",
+      );
+    }
+  };
+
   // --- NOVA FUNÇÃO: Baixar PDF Anexo IV ---
   const handleDownloadAnexoIV = async () => {
     try {
@@ -439,7 +478,7 @@ export function DetalhesViagem() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => alert("Em breve: Editar PDF")}
+                  onClick={() => navigate(`/viagem/${id}/preencher-anexo-i`)}
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   title="Editar"
                 >
@@ -448,7 +487,7 @@ export function DetalhesViagem() {
                   </span>
                 </button>
                 <button
-                  onClick={() => alert("Em breve: Baixar PDF")}
+                  onClick={handleDownloadAnexoI}
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   title="Baixar"
                 >
