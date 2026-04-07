@@ -47,12 +47,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("user", JSON.stringify(data));
   }
 
+  async function signInWithToken(token: string): Promise<UserResponse> {
+    localStorage.setItem("token", token);
+    const response = await fetch("/api/users/me", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro ao buscar informações do usuário");
+    }
+
+    const userJson = await response.json() as UserResponse;
+    save(userJson);
+    return userJson;
+  }
+
   useEffect(() => {
     // Espaço para lógica futura
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, save, logout, isLoadingSession }}>
+    <AuthContext.Provider value={{ session, save, logout, signInWithToken, isLoadingSession }}>
       {children}
     </AuthContext.Provider>
   );
