@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { formatarData } from "../../../utils/date";
 import { handleViewDocument } from "../../../utils/api";
 import { useDocumentoUsuario } from "../../../hooks/useDocumentoUsuario";
+import type { UserResponse } from "../../../dtos/user";
 
 interface UserProfileCardProps {
   session: UserResponse;
@@ -84,7 +85,7 @@ export function UserProfileCard({ session }: UserProfileCardProps) {
                 value={formatarData(session.dataNascimento)}
               />
             )}
-            {session.role === "DISCENTE" && (
+            {(session.role === "DISCENTE" || session.role === "SERVIDOR") && (
               <InfoBlock
                 label="Telefone"
                 value={session.telefone || "Não informado"}
