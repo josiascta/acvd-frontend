@@ -7,6 +7,7 @@ import { CompletarPerfil } from "../pages/CompletarPerfil";
 import { NovaViagemColetiva } from "../pages/NovaViagemColetiva";
 import { DetalhesViagem } from "../pages/DetalhesViagem";
 import { FormularioAnexoI } from "../pages/FormularioAnexoI";
+import { FormularioAnexoIII } from "../pages/FormularioAnexoIII";
 
 export function ServidorRoutes() {
   return (
@@ -20,6 +21,10 @@ export function ServidorRoutes() {
         <Route
           path="/viagem/:id/preencher-anexo-i"
           element={<FormularioAnexoI />}
+        />
+        <Route
+          path="/viagem/:id/preencher-anexo-iii"
+          element={<FormularioAnexoIII />}
         />
       </Route>
 

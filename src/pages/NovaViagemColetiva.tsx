@@ -10,6 +10,7 @@ interface FormDataState {
 }
 
 interface ItinerarioState {
+  descricao: string | number | readonly string[] | undefined;
   horarioEntrada: string;
   horarioSaida: string;
   local: string;
@@ -27,7 +28,7 @@ export function NovaViagemColetiva() {
   });
 
   const [itinerarios, setItinerarios] = useState<ItinerarioState[]>([
-    { horarioEntrada: "", horarioSaida: "", local: "" },
+    { horarioEntrada: "", horarioSaida: "", local: "" , descricao: "" },
   ]);
 
   // Data atual formatada para o atributo "min" dos inputs HTML5
@@ -52,7 +53,7 @@ export function NovaViagemColetiva() {
   const adicionarItinerario = () => {
     setItinerarios([
       ...itinerarios,
-      { horarioEntrada: "", horarioSaida: "", local: "" },
+      { horarioEntrada: "", horarioSaida: "", local: "" , descricao: "" },
     ]);
   };
 
@@ -260,6 +261,21 @@ export function NovaViagemColetiva() {
                         value={it.local}
                         onChange={(e) =>
                           handleItinerarioChange(index, "local", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-[#008060] focus:border-[#008060] text-sm"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">
+                        Descrição
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Descrição do itinerário"
+                        value={it.descricao}
+                        onChange={(e) =>
+                          handleItinerarioChange(index, "descricao", e.target.value)
                         }
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-[#008060] focus:border-[#008060] text-sm"
                       />

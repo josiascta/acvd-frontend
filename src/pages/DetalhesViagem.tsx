@@ -225,6 +225,45 @@ export function DetalhesViagem() {
       );
     }
   };
+  const handleDownloadAnexoIII = async () => {
+    // Busca o ID do anexo que foi salvo no localStorage após o preenchimento
+    const anexoIIIId = localStorage.getItem(`anexoIII_${id}`);
+
+  if (!anexoIIIId) {
+      alert("Você precisa preencher (Editar) o Anexo III antes de baixá-lo.");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_URL}/planejamento-atividade/${anexoIIIId}/download`,
+        {
+          method: "GET",
+          headers: getHeaders(),
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("Arquivo não encontrado no servidor.");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Anexo_III_Viagem_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar Anexo III:", error);
+      alert(
+        "Falha ao baixar o Anexo III. Verifique se o documento já foi gerado.",
+      );
+    }
+  };
+
 
   // --- NOVA FUNÇÃO: Baixar PDF Anexo IV ---
   const handleDownloadAnexoIV = async () => {
@@ -513,7 +552,7 @@ export function DetalhesViagem() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => alert("Em breve: Editar PDF")}
+                  onClick={() => navigate(`/viagem/${id}/preencher-anexo-iii`)}
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   title="Editar"
                 >
@@ -522,7 +561,7 @@ export function DetalhesViagem() {
                   </span>
                 </button>
                 <button
-                  onClick={() => alert("Em breve: Baixar PDF")}
+                  onClick={handleDownloadAnexoIII}
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   title="Baixar"
                 >
