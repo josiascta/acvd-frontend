@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { useContaBancaria } from "../hooks/useContaBancaria";
 
 
 // --- Opções de Auxílio ---
@@ -53,7 +55,8 @@ const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
 // ... dentro do componente SolicitacaoIndividual
 const location = useLocation(); // Aqui ela deixa de ser "unused"
-
+ const { session } = useAuth();
+ const { contaBancaria: dadosBancariosHook } = useContaBancaria();
 // Use o location.state para pegar os dados
 const dadosParaEdicao = location.state?.edicao;
   const {
@@ -77,6 +80,7 @@ const dadosParaEdicao = location.state?.edicao;
         ...dadosParaEdicao,
         // Concatena Data e Hora para o formato YYYY-MM-DDTHH:mm exigido pelo input datetime-local
         dataPartida: `${dadosParaEdicao.dataSaida}T${dadosParaEdicao.horaSaida}`,
+        
         dataRetorno: `${dadosParaEdicao.dataChegada}T${dadosParaEdicao.horaChegada}`,
         
         // Mapeia os campos booleanos do banco de volta para o array 'auxilios' do formulário
@@ -99,6 +103,7 @@ const dadosParaEdicao = location.state?.edicao;
         });
         if (response.ok) {
           const data = await response.json();
+          console.log("JSON REAL QUE SAIU DO JAVA:", data);
           reset({
             nome: data.nome,
             cpf: data.numeroCpf,
@@ -108,10 +113,10 @@ const dadosParaEdicao = location.state?.edicao;
             telefone: data.telefone,
             endereco: "Endereço não cadastrado",
             campus: "Monteiro",
-            turmaPeriodo: data.turmaPeriodo,
+            turmaPeriodo: data.turmaPeriodo || session?.turmaPeriodo,
             banco: data.contaBancaria?.banco || "",
-            agencia: data.contaBancaria?.agencia || "",
-            conta: data.contaBancaria?.numeroConta || "",
+            agencia: session?.contaBancaria?.agencia|| dadosBancariosHook?.agencia || data.contaBancaria?.agencia || "",
+            conta: data.contaBancaria?.numero || dadosBancariosHook?.numero || session?.contaBancaria?.numero || "",
             nomeFamiliar: data.responsavelLegal?.nome || "",
             contatoFamiliar: data.responsavelLegal?.telefone || "",
             auxilios: [], // Começa vazio para nova solicitação
@@ -127,8 +132,10 @@ const dadosParaEdicao = location.state?.edicao;
 }, [token, reset, dadosParaEdicao]);
 
  const onSubmit = async (values: SolicitacaoFormData) => {
+  console.log("Valores que estão indo para o Java:", values);
   setLoading(true);
   try {
+    
     let viagemId = dadosParaEdicao?.viagemId; // Tenta pegar o ID se for edição
 
     // 1. SÓ CRIA UMA VIAGEM NOVA SE NÃO FOR EDIÇÃO
@@ -167,7 +174,10 @@ const dadosParaEdicao = location.state?.edicao;
     // 2. SALVAR/ATUALIZAR A SOLICITAÇÃO
     const payloadSolicitacao = {
       ...values,
-      viagemId: viagemId, // Usa o ID existente ou o novo
+      viagemId: viagemId, 
+      turmaPeriodo: values.turmaPeriodo, 
+      curso: values.curso,
+      campus: values.campus,// Usa o ID existente ou o novo
       solicitadoEm: new Date().toISOString(),
       
       // Mapeamentos que já corrigimos...
@@ -243,6 +253,7 @@ const dadosParaEdicao = location.state?.edicao;
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <div>
+            <input type="hidden" {...register("turmaPeriodo")} />
             <h3 className="text-lg font-bold text-slate-800 mb-4">Auxílios Pretendidos</h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {auxilioOptions.map((opt) => (
