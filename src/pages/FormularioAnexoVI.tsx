@@ -40,7 +40,7 @@ export function FormularioAnexoVI() {
       const data = await res.json();
 
       // 🔥 salva no localStorage igual os outros
-      localStorage.setItem(`anexoRelatorio_${viagemId}`, data.id);
+      localStorage.setItem(`anexovi_${viagemId}`, data.id);
 
       alert("Relatório gerado com sucesso!");
       navigate(`/viagem/${viagemId}`);

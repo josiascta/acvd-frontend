@@ -95,6 +95,18 @@ export function DetalhesViagem() {
     }
   };
 
+  const viagemFinalizada = () => {
+    if (!viagem) return false;
+
+    if (!viagem.dataRetorno) return false;
+
+    const hoje = new Date();
+    const dataRetorno = new Date(viagem.dataRetorno);
+
+    return hoje > dataRetorno;
+  };
+  const isFinalizada = viagemFinalizada();
+  
   const fetchRequisicoes = async () => {
     try {
       setLoading(true);
@@ -229,7 +241,7 @@ export function DetalhesViagem() {
     // Busca o ID do anexo que foi salvo no localStorage após o preenchimento
     const anexoIIIId = localStorage.getItem(`anexoIII_${id}`);
 
-  if (!anexoIIIId) {
+    if (!anexoIIIId) {
       alert("Você precisa preencher (Editar) o Anexo III antes de baixá-lo.");
       return;
     }
@@ -263,7 +275,44 @@ export function DetalhesViagem() {
       );
     }
   };
+  const handleDownloadAnexoVI = async () => {
+    // Busca o ID do anexo que foi salvo no localStorage após o preenchimento
+    const anexoVIId = localStorage.getItem(`anexovi_${id}`);
 
+    if (!anexoVIId) {
+      alert("Você precisa preencher (Editar) o Anexo VI antes de baixá-lo.");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_URL}/relatorio-atividade/${anexoVIId}/download`,
+        {
+          method: "GET",
+          headers: getHeaders(),
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("Arquivo não encontrado no servidor.");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Anexo_VI_Viagem_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar Anexo VI:", error);
+      alert(
+        "Falha ao baixar o Anexo VI. Verifique se o documento já foi gerado.",
+      );
+    }
+  };
 
   // --- NOVA FUNÇÃO: Baixar PDF Anexo IV ---
   const handleDownloadAnexoIV = async () => {
@@ -593,6 +642,74 @@ export function DetalhesViagem() {
                 <button
                   onClick={handleDownloadAnexoIV}
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  title="Baixar"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    download
+                  </span>
+                </button>
+              </div>
+            </div>
+            {/* ANEXO VI */}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-shadow">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-blue-500 text-3xl">
+                  description
+                </span>
+                <div>
+                  <h4 className="font-bold text-slate-900">ANEXO VI</h4>
+                  <p className="text-xs text-slate-500 font-medium">
+                    RELATÓRIO DE ATIVIDADE DE CAMPO
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {!isFinalizada && (
+                  <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                    Disponível apenas após o término da viagem
+                  </p>
+                )}
+                <button
+                  onClick={() => {
+                    if (!isFinalizada) {
+                      alert(
+                        "O relatório só pode ser preenchido após o término da viagem.",
+                      );
+                      return;
+                    }
+                    navigate(`/viagem/${id}/preencher-anexo-vi`);
+                  }}
+                  disabled={!isFinalizada}
+                  className={`p-1.5 rounded-md transition-colors
+      ${
+        isFinalizada
+          ? "text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+          : "text-slate-300 cursor-not-allowed"
+      }`}
+                  title="Editar"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    edit
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!isFinalizada) {
+                      alert(
+                        "O relatório só pode ser baixado após o término da viagem.",
+                      );
+                      return;
+                    }
+                    handleDownloadAnexoVI();
+                  }}
+                  disabled={!isFinalizada}
+                  className={`p-1.5 rounded-md transition-colors
+      ${
+        isFinalizada
+          ? "text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+          : "text-slate-300 cursor-not-allowed"
+      }`}
                   title="Baixar"
                 >
                   <span className="material-symbols-outlined text-[20px]">
