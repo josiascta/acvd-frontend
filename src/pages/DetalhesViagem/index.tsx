@@ -19,7 +19,8 @@ export function DetalhesViagem() {
   const [statusFilter, setStatusFilter] = useState<string>("TODOS");
 
   // Hooks encapsulados
-  const { viagem, requisicoes, loading, fetchRequisicoes } = useViagemDetalhes(id);
+  const { viagem, requisicoes, loading, fetchRequisicoes } =
+    useViagemDetalhes(id);
   const {
     addLoading,
     submittingEval,
@@ -32,11 +33,14 @@ export function DetalhesViagem() {
 
   // Estados dos Modais
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedInfoReq, setSelectedInfoReq] = useState<RequisicaoDetalhesDTO | null>(null);
-  const [reqToValidate, setReqToValidate] = useState<RequisicaoDetalhesDTO | null>(null);
+  const [selectedInfoReq, setSelectedInfoReq] =
+    useState<RequisicaoDetalhesDTO | null>(null);
+  const [reqToValidate, setReqToValidate] =
+    useState<RequisicaoDetalhesDTO | null>(null);
 
   const openInfoModal = (req: RequisicaoDetalhesDTO) => setSelectedInfoReq(req);
-  const openValidateModal = (req: RequisicaoDetalhesDTO) => setReqToValidate(req);
+  const openValidateModal = (req: RequisicaoDetalhesDTO) =>
+    setReqToValidate(req);
 
   return (
     <div className="flex-grow w-full bg-[#f9fafb] min-h-[calc(100vh-64px)] pb-12">
@@ -73,7 +77,9 @@ export function DetalhesViagem() {
         {activeTab === "DOCUMENTOS" && (
           <DocumentosViagemTab
             id={id}
-            handleDownloadAnexoI={handleDownloadAnexoI}
+            handleDownloadAnexoI={() =>
+              handleDownloadAnexoI(viagem?.solicitacaoColetivaId)
+            }
             handleDownloadAnexoIV={handleDownloadAnexoIV}
           />
         )}

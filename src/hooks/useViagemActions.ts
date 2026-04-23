@@ -21,7 +21,8 @@ export const validationItems: ValidationItem[] = [
   {
     id: "info_responsavel",
     label: "Informações do responsável legal consistentes e completas",
-    errorMsg: "Informações do responsável legal estão divergentes ou incompletas",
+    errorMsg:
+      "Informações do responsável legal estão divergentes ou incompletas",
   },
   {
     id: "dados_pessoais",
@@ -31,12 +32,14 @@ export const validationItems: ValidationItem[] = [
   {
     id: "assinaturas",
     label: "Assinaturas e formatação dos documentos válidas",
-    errorMsg: "Falta de assinatura ou formatação inválida nos documentos exigidos",
+    errorMsg:
+      "Falta de assinatura ou formatação inválida nos documentos exigidos",
   },
   {
     id: "anexo_v",
     label: "Termo de Compromisso (Anexo V) preenchido corretamente",
-    errorMsg: "Termo de Compromisso (Anexo V) ausente ou preenchido incorretamente",
+    errorMsg:
+      "Termo de Compromisso (Anexo V) ausente ou preenchido incorretamente",
   },
 ];
 
@@ -73,7 +76,7 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
               method: "POST",
               headers: getHeaders(),
               body: JSON.stringify(payload),
-            }
+            },
           );
           if (!res.ok) {
             return { success: false, email };
@@ -94,7 +97,7 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
           `Processo concluído com ressalvas:\n\n` +
             `${sucessos.length} aluno(s) adicionado(s) com sucesso.\n\n` +
             `Falha ao adicionar os seguintes e-mails:\n- ${falhasEmails}\n\n` +
-            `Motivo provável: O aluno não possui cadastro no sistema ou já está na viagem.`
+            `Motivo provável: O aluno não possui cadastro no sistema ou já está na viagem.`,
         );
       }
 
@@ -114,7 +117,7 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
   const submitValidationBase = async (
     reqId: string,
     checkedItems: string[],
-    otherObservation: string
+    otherObservation: string,
   ) => {
     setSubmittingEval(true);
     const isAllChecked = checkedItems.length === validationItems.length;
@@ -134,7 +137,7 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
       } else {
         // REPROVAR
         const missingItems = validationItems.filter(
-          (item) => !checkedItems.includes(item.id)
+          (item) => !checkedItems.includes(item.id),
         );
         let finalMotivo = missingItems.map((item) => item.errorMsg).join(" | ");
 
@@ -167,19 +170,23 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
     }
   };
 
-  const handleDownloadAnexoI = async () => {
-    const anexoIId = localStorage.getItem(`anexoI_${id}`);
-    if (!anexoIId) {
+  // Altere a função no seu hook para receber o ID como parâmetro
+  const handleDownloadAnexoI = async (solicitacaoColetivaId?: string) => {
+    // Se não existir o ID, significa que o usuário ainda não preencheu e salvou no banco
+    if (!solicitacaoColetivaId) {
       alert("Você precisa preencher (Editar) o Anexo I antes de baixá-lo.");
       return;
     }
+
     try {
+      // Usamos o ID que veio por parâmetro
       const res = await fetch(
-        `${API_URL}/solicitacoes-coletivas/${anexoIId}/download`,
-        { method: "GET", headers: getHeaders() }
+        `${API_URL}/solicitacoes-coletivas/${solicitacaoColetivaId}/download`,
+        { method: "GET", headers: getHeaders() },
       );
+
       if (!res.ok) throw new Error("Arquivo não encontrado no servidor.");
-      
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -187,11 +194,14 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
       link.setAttribute("download", `Anexo_I_Viagem_${id}.pdf`);
       document.body.appendChild(link);
       link.click();
+
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Erro ao baixar Anexo I:", error);
-      alert("Falha ao baixar o Anexo I. Verifique se o documento já foi gerado.");
+      alert(
+        "Falha ao baixar o Anexo I. Verifique se o documento já foi gerado.",
+      );
     }
   };
 
@@ -199,7 +209,7 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
     try {
       const res = await fetch(
         `${API_URL}/api/pdf/viagens/${id}/discentes-participantes`,
-        { method: "GET", headers: getHeaders() }
+        { method: "GET", headers: getHeaders() },
       );
       if (!res.ok) throw new Error("Erro ao baixar o arquivo");
 
@@ -207,14 +217,19 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `Anexo_IV_Discentes_Participantes_${id}.pdf`);
+      link.setAttribute(
+        "download",
+        `Anexo_IV_Discentes_Participantes_${id}.pdf`,
+      );
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Erro ao baixar Anexo IV:", error);
-      alert("Falha ao baixar o documento. Verifique se há alunos na viagem ou tente novamente mais tarde.");
+      alert(
+        "Falha ao baixar o documento. Verifique se há alunos na viagem ou tente novamente mais tarde.",
+      );
     }
   };
 
