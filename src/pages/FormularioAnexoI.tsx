@@ -30,7 +30,7 @@ export function FormularioAnexoI() {
       const payload = {
         viagemId,
         solicitadoEm: new Date().toISOString(),
-        afastamento: "MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM", // Mockado conforme solicitado
+        afastamento: "MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM",
         ...formData,
       };
 
@@ -48,9 +48,6 @@ export function FormularioAnexoI() {
       }
 
       const data = await res.json();
-
-      // Salva o ID do documento gerado no localStorage vinculado a esta viagem
-      localStorage.setItem(`anexoI_${viagemId}`, data.id);
 
       alert("Anexo I gerado e salvo com sucesso!");
       navigate(`/viagem/${viagemId}`); // Volta para a tela de detalhes

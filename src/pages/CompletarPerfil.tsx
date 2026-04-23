@@ -265,7 +265,7 @@ export function CompletarPerfil() {
               {...register("matricula")}
             />
 
-            {isDiscente && (
+            {(isDiscente || session?.role === "SERVIDOR") && (
               <InputForm
                 label="Telefone"
                 placeholder="(00) 00000-0000"
@@ -287,13 +287,14 @@ export function CompletarPerfil() {
                 {...register("dataNascimento")}
               />
             )}
-{/* CAMPO ADICIONADO AQUI */}
-    <InputForm
-      label="Turma / Período"
-      placeholder="Ex: 5º Período"
-      error={errors.turmaPeriodo?.message}
-      {...register("turmaPeriodo")}
-    />
+            {isDiscente && (
+              <InputForm
+                label="Turma / Período"
+                placeholder="Ex: 5º Período"
+                error={errors.turmaPeriodo?.message}
+                {...register("turmaPeriodo")}
+              />
+            )}
             {isDiscente && (
               <SelectForm
                 label="Curso"

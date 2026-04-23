@@ -97,7 +97,11 @@ export function MinhaRequisicao() {
         return;
       }
 
-      let urlFetch = `http://localhost:8080/solicitacoes-coletivas/${viagemId}/termo-individual/${alunoId}`;
+      // 1. ATUALIZAÇÃO DA URL: Apontando para o novo Controller centralizado
+      // Usando a constante API_URL importada de ../utils/api
+      let urlFetch = `${API_URL}/api/pdf/termo-responsabilidade/coletiva/${viagemId}/aluno/${alunoId}`;
+
+      // Mantemos a lógica de parâmetros para casos onde o responsável é informado manualmente
       if (manual?.nome) {
         urlFetch += `?nomeResp=${encodeURIComponent(manual.nome)}&contatoResp=${encodeURIComponent(manual.contato)}`;
       }
@@ -119,10 +123,11 @@ export function MinhaRequisicao() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute(
-        "download",
-        `Anexo_V_${dados.discenteNome?.replace(/\s+/g, "_") || "Termo"}.pdf`,
-      );
+
+      // Formata o nome do arquivo para o download
+      const nomeLimpo = dados.discenteNome?.replace(/\s+/g, "_") || "Termo";
+      link.setAttribute("download", `Anexo_V_${nomeLimpo}.pdf`);
+
       document.body.appendChild(link);
       link.click();
       link.remove();

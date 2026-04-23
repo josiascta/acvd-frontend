@@ -85,7 +85,7 @@ export function UserProfileCard({ session }: UserProfileCardProps) {
                 value={formatarData(session.dataNascimento)}
               />
             )}
-            {session.role === "DISCENTE" && (
+            {(session.role === "DISCENTE" || session.role === "SERVIDOR") && (
               <InfoBlock
                 label="Telefone"
                 value={session.telefone || "Não informado"}
