@@ -345,58 +345,61 @@ const confirmarExclusao = async () => {
     </button>
   </div>
 </div>
-{/* MODAL DE CONFIRMAÇÃO */}
-{showModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-    <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl transform animate-in zoom-in-95 duration-300">
-      
-      {isSuccess ? (
-        /* CONTEÚDO DE SUCESSO */
-        <div className="flex flex-col items-center text-center animate-in zoom-in duration-300">
-          <div className="bg-green-50 text-green-500 w-20 h-20 rounded-full flex items-center justify-center mb-6 scale-110">
-            <span className="material-symbols-outlined text-5xl">check_circle</span>
-          </div>
-          <h3 className="text-2xl font-black text-slate-900 mb-2">Excluído!</h3>
-          <p className="text-slate-500 text-sm">
-            A solicitação e os arquivos foram removidos com sucesso. Redirecionando...
-          </p>
-        </div>
-      ) : (
-        /* CONTEÚDO DE PERGUNTA (O que você já tinha) */
-        <div className="flex flex-col items-center text-center">
-          <div className="bg-red-50 text-red-500 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-            <span className="material-symbols-outlined text-4xl">delete_forever</span>
-          </div>
-          
-          <h3 className="text-xl font-black text-slate-900 mb-2">Tem certeza?</h3>
-          <p className="text-slate-500 text-sm mb-8">
-            Você está prestes a excluir esta solicitação e todos os seus anexos.
-          </p>
-
-          <div className="flex gap-3 w-full">
-            <button
-              onClick={() => setShowModal(false)}
-              className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={confirmarExclusao}
-              disabled={isDeleting}
-              className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-2"
-            >
-              {isDeleting ? 'Excluindo...' : 'Sim, excluir'}
-            </button>
-          </div>
+{/* FIM DO ANEXO VII */}
         </div>
       )}
 
-    </div>
+{/* MODAL DE CONFIRMAÇÃO - MOVIDO PARA FORA DAS ABAS */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          {/* Camada invisível para fechar ao clicar fora */}
+          <div className="absolute inset-0" onClick={() => setShowModal(false)} />
+
+          <div className="relative bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl transform animate-in zoom-in-95 duration-300">
+            {isSuccess ? (
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-green-50 text-green-500 w-20 h-20 rounded-full flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-5xl">check_circle</span>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 mb-2">Excluído!</h3>
+                <p className="text-slate-500 text-sm">Redirecionando...</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-red-50 text-red-500 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                  <span className="material-symbols-outlined text-4xl">delete_forever</span>
+                </div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">Tem certeza?</h3>
+                <p className="text-slate-500 text-sm mb-8">
+                  Você está prestes a excluir esta solicitação e todos os seus anexos.
+                </p>
+                <div className="flex gap-3 w-full">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      confirmarExclusao();
+                    }}
+                    disabled={isDeleting}
+                    className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200"
+                  >
+                    {isDeleting ? 'Excluindo...' : 'Sim, excluir'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </main>
   </div>
-)}
-  </div>
-)}
-      </main>
-    </div>
-  );
+ );
 }
+ 

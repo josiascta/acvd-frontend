@@ -233,6 +233,82 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
     }
   };
 
+  const handleDownloadAnexoIII = async () => {
+    const anexoIIIId = localStorage.getItem(`anexoIII_${id}`);
+
+    if (!anexoIIIId) {
+      alert("Você precisa preencher (Editar) o Anexo III antes de baixá-lo.");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_URL}/planejamento-atividade/${anexoIIIId}/download`,
+        {
+          method: "GET",
+          headers: getHeaders(),
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("Arquivo não encontrado no servidor.");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Anexo_III_Viagem_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar Anexo III:", error);
+      alert(
+        "Falha ao baixar o Anexo III. Verifique se o documento já foi gerado.",
+      );
+    }
+  };
+
+  const handleDownloadAnexoVI = async () => {
+    const anexoVIId = localStorage.getItem(`anexovi_${id}`);
+
+    if (!anexoVIId) {
+      alert("Você precisa preencher (Editar) o Anexo VI antes de baixá-lo.");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_URL}/relatorio-atividade/${anexoVIId}/download`,
+        {
+          method: "GET",
+          headers: getHeaders(),
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("Arquivo não encontrado no servidor.");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Anexo_VI_Viagem_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar Anexo VI:", error);
+      alert(
+        "Falha ao baixar o Anexo VI. Verifique se o documento já foi gerado.",
+      );
+    }
+  };
+
   const handleDeleteAluno = (reqId: string) => {
     alert("Fazer ainda.");
   };
@@ -244,6 +320,8 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
     submitValidationBase,
     handleDownloadAnexoI,
     handleDownloadAnexoIV,
+    handleDownloadAnexoIII,
+    handleDownloadAnexoVI,
     handleDeleteAluno,
   };
 }

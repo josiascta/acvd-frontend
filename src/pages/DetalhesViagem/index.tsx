@@ -28,6 +28,8 @@ export function DetalhesViagem() {
     submitValidationBase,
     handleDownloadAnexoI,
     handleDownloadAnexoIV,
+    handleDownloadAnexoIII,
+    handleDownloadAnexoVI,
     handleDeleteAluno,
   } = useViagemActions(id, fetchRequisicoes);
 
@@ -41,6 +43,15 @@ export function DetalhesViagem() {
   const openInfoModal = (req: RequisicaoDetalhesDTO) => setSelectedInfoReq(req);
   const openValidateModal = (req: RequisicaoDetalhesDTO) =>
     setReqToValidate(req);
+
+  const viagemFinalizada = () => {
+    if (!viagem) return false;
+    if (!viagem.dataRetorno) return false;
+    const hoje = new Date();
+    const dataRetorno = new Date(viagem.dataRetorno);
+    return hoje > dataRetorno;
+  };
+  const isFinalizada = viagemFinalizada();
 
   return (
     <div className="flex-grow w-full bg-[#f9fafb] min-h-[calc(100vh-64px)] pb-12">
@@ -77,10 +88,13 @@ export function DetalhesViagem() {
         {activeTab === "DOCUMENTOS" && (
           <DocumentosViagemTab
             id={id}
+            isFinalizada={isFinalizada}
             handleDownloadAnexoI={() =>
               handleDownloadAnexoI(viagem?.solicitacaoColetivaId)
             }
             handleDownloadAnexoIV={handleDownloadAnexoIV}
+            handleDownloadAnexoIII={handleDownloadAnexoIII}
+            handleDownloadAnexoVI={handleDownloadAnexoVI}
           />
         )}
 

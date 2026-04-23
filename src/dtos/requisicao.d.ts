@@ -60,4 +60,5 @@ type RequisicaoResumoDTO = {
   motivoReprovacao?: string;
   valorDiaria: number;
   inscricaoValor: number;
+  responsavelLegal?: ResponsavelInfoDTO;
 };
