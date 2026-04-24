@@ -1,5 +1,7 @@
 import React, { useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { AlunoCard } from "./AlunoCard";
+import { handleDownloadZipDocuments } from "../../../utils/api";
 
 type Props = {
   requisicoes: RequisicaoDetalhesDTO[];
@@ -24,6 +26,8 @@ export function AlunosViagemTab({
   openInfoModal,
   handleDeleteAluno,
 }: Props) {
+  const { id } = useParams<{ id: string }>();
+
   const requisicoesFiltradas = useMemo(() => {
     return requisicoes
       .filter((req) => {
@@ -52,7 +56,7 @@ export function AlunosViagemTab({
 
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 shrink-0">
           <button
-            onClick={() => alert("Fazer ainda.")}
+            onClick={() => id && handleDownloadZipDocuments(id)}
             className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap"
             title="Baixa os documentos de todos os alunos agrupados por pasta"
           >

@@ -46,3 +46,30 @@ export const handleDownloadDocument = async (
     console.error(error);
   }
 };
+
+export const handleDownloadZipDocuments = async (viagemId: string) => {
+  try {
+    const res = await fetch(
+      `${API_URL}/requisicoes/viagens/${viagemId}/documentos/download-zip`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      },
+    );
+
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Documentos_Viagem_${viagemId.substring(0, 8)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } else {
+      alert("Não foi possível baixar os documentos em lote.");
+    }
+  } catch (error) {
+    console.error("Erro ao realizar o download do zip:", error);
+  }
+};
