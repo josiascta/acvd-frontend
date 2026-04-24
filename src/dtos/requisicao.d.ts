@@ -11,6 +11,13 @@ type DocumentoInfoDTO = {
   dataUpload: string;
 };
 
+type TermoResponsabilidadeDTO = {
+  id: string;
+  tamanho: string;
+  hash: string;
+  data: string;
+};
+
 type ContaInfoDTO = {
   banco: string;
   agencia: string;
@@ -48,6 +55,7 @@ type RequisicaoDetalhesDTO = {
   contaBancaria?: ContaInfoDTO;
   documentoDiscente?: DocumentoInfoDTO;
   responsavelLegal?: ResponsavelInfoDTO;
+  termoResponsabilidade?: DocumentoInfoDTO;
 };
 
 type RequisicaoResumoDTO = {
@@ -61,4 +69,5 @@ type RequisicaoResumoDTO = {
   valorDiaria: number;
   inscricaoValor: number;
   responsavelLegal?: ResponsavelInfoDTO;
+  termoResponsabilidade?: DocumentoInfoDTO;
 };

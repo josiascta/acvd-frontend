@@ -18,9 +18,9 @@ export function DetalhesViagem() {
   const [activeTab, setActiveTab] = useState<"DOCUMENTOS" | "ALUNOS">("ALUNOS");
   const [statusFilter, setStatusFilter] = useState<string>("TODOS");
 
-  // Hooks encapsulados
-  const { viagem, requisicoes, loading, fetchRequisicoes } =
+  const { viagem, requisicoes, loading, fetchRequisicoes, removeRequisicao } =
     useViagemDetalhes(id);
+
   const {
     addLoading,
     submittingEval,
@@ -30,7 +30,6 @@ export function DetalhesViagem() {
     handleDownloadAnexoIV,
     handleDownloadAnexoIII,
     handleDownloadAnexoVI,
-    handleDeleteAluno,
   } = useViagemActions(id, fetchRequisicoes);
 
   // Estados dos Modais
@@ -109,7 +108,7 @@ export function DetalhesViagem() {
             submittingEval={submittingEval}
             openValidateModal={openValidateModal}
             openInfoModal={openInfoModal}
-            handleDeleteAluno={handleDeleteAluno}
+            handleDeleteAluno={removeRequisicao}
           />
         )}
       </main>

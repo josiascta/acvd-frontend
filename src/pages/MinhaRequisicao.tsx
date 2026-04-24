@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { API_URL, getHeaders } from "../utils/api";
+import toast from "react-hot-toast";
 
 export function MinhaRequisicao() {
   const { id } = useParams<{ id: string }>();
@@ -11,9 +12,14 @@ export function MinhaRequisicao() {
   const [dadosTemp, setDadosTemp] = useState({ nome: "", contato: "" });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingTermo, setUploadingTermo] = useState(false);
+
+  // O estado principal que guarda os dados da requisição
   const [requisicao, setRequisicao] = useState<RequisicaoResumoDTO | null>(
     null,
   );
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchMinhaRequisicao = async () => {
@@ -43,6 +49,9 @@ export function MinhaRequisicao() {
   const handleConfirmarRequisicao = async () => {
     setSubmitting(true);
     setShowConfirmSubmit(false);
+
+    const toastId = toast.loading("Enviando documentos para análise...");
+
     try {
       const res = await fetch(`${API_URL}/requisicoes/${id}/enviar`, {
         method: "PATCH",
@@ -51,20 +60,83 @@ export function MinhaRequisicao() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.message || "Erro ao enviar requisição");
+        throw new Error(errData.message || "Erro ao enviar requisição.");
       }
 
       setRequisicao((prev) =>
         prev ? { ...prev, status: "AGUARDANDO_ANALISE" } : null,
       );
-      alert("Documentos enviados com sucesso!");
+
+      toast.success("Documentos enviados com sucesso!", { id: toastId });
     } catch (error: any) {
-      alert(
+      toast.error(
         error.message ||
-          "Falha ao enviar a requisição para análise. Verifique se anexou todos os documentos corretamente.",
+          "Falha ao enviar a requisição para análise. Verifique se anexou todos os documentos.",
+        { id: toastId },
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUploadTermo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingTermo(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const toastId = toast.loading("Enviando Anexo V...");
+
+    try {
+      const res = await fetch(
+        `${API_URL}/requisicoes/${id}/termo-responsabilidade`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: formData,
+        },
+      );
+
+      if (!res.ok)
+        throw new Error("Erro ao fazer upload do termo de responsabilidade.");
+
+      const docData = await res.json();
+
+      setRequisicao((prev) =>
+        prev ? { ...prev, termoResponsabilidade: docData } : null,
+      );
+
+      toast.success("Anexo V anexado com sucesso!", { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    } finally {
+      setUploadingTermo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleViewAnexoV = async () => {
+    const toastId = toast.loading("Abrindo documento...");
+    try {
+      const res = await fetch(
+        `${API_URL}/requisicoes/${id}/termo-responsabilidade/download`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+      if (!res.ok) throw new Error("Erro ao visualizar o documento.");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      toast.dismiss(toastId); // Fecha o toast silenciosamente pois a nova aba já abriu
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
     }
   };
 
@@ -88,20 +160,20 @@ export function MinhaRequisicao() {
     dados: RequisicaoResumoDTO,
     manual?: { nome: string; contato: string },
   ) => {
+    const toastId = toast.loading("Gerando PDF do Anexo V...");
     try {
       const viagemId = dados.viagemId;
       const alunoId = dados.discenteId;
 
       if (!viagemId || !alunoId) {
-        alert("Erro: Dados da viagem ou do discente não encontrados.");
+        toast.error("Erro: Dados da viagem ou do discente não encontrados.", {
+          id: toastId,
+        });
         return;
       }
 
-      // 1. ATUALIZAÇÃO DA URL: Apontando para o novo Controller centralizado
-      // Usando a constante API_URL importada de ../utils/api
       let urlFetch = `${API_URL}/api/pdf/termo-responsabilidade/coletiva/${viagemId}/aluno/${alunoId}`;
 
-      // Mantemos a lógica de parâmetros para casos onde o responsável é informado manualmente
       if (manual?.nome) {
         urlFetch += `?nomeResp=${encodeURIComponent(manual.nome)}&contatoResp=${encodeURIComponent(manual.contato)}`;
       }
@@ -124,7 +196,6 @@ export function MinhaRequisicao() {
       const link = document.createElement("a");
       link.href = url;
 
-      // Formata o nome do arquivo para o download
       const nomeLimpo = dados.discenteNome?.replace(/\s+/g, "_") || "Termo";
       link.setAttribute("download", `Anexo_V_${nomeLimpo}.pdf`);
 
@@ -132,14 +203,16 @@ export function MinhaRequisicao() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+
+      toast.success("Download concluído com sucesso!", { id: toastId });
     } catch (error: any) {
-      alert(error.message);
+      toast.error(error.message, { id: toastId });
     }
   };
 
   const confirmarESalvar = async () => {
     if (!dadosTemp.nome || !dadosTemp.contato) {
-      alert("Por favor, preencha todos os campos do responsável.");
+      toast.error("Por favor, preencha todos os campos do responsável.");
       return;
     }
     setShowModal(false);
@@ -152,8 +225,11 @@ export function MinhaRequisicao() {
     requisicao?.status === "AGUARDANDO_ENVIO" ||
     requisicao?.status === "REPROVADO";
 
+  // Verificamos de forma segura se o anexo V existe lendo o DTO do backend
+  const temAnexo = !!requisicao?.termoResponsabilidade;
+
   return (
-    <div className="flex-grow w-full bg-[#f9fafb] min-h-[calc(100vh-64px)] pb-12">
+    <div className="flex-grow w-full bg-[#f9fafb] min-h-[calc(100vh-64px)] pb-12 relative">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div>
           <button
@@ -192,12 +268,12 @@ export function MinhaRequisicao() {
               error
             </span>
             <p className="font-semibold">
-              Requisição não encontrada ou não tens permissão para a visualizar.
+              Requisição não encontrada ou você não tem permissão para a
+              visualizar.
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {/* BOX REPROVAÇÃO - AGORA EM BULLETS */}
             {requisicao.status === "REPROVADO" &&
               requisicao.motivoReprovacao && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm">
@@ -231,7 +307,6 @@ export function MinhaRequisicao() {
                 </h3>
               </div>
 
-              {/* PASSO A PASSO EDUCATIVO */}
               {podeEnviar && (
                 <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 mb-6">
                   <h4 className="text-blue-800 font-bold text-sm mb-2 flex items-center gap-1">
@@ -268,9 +343,15 @@ export function MinhaRequisicao() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-bold text-slate-800">ANEXO V</h4>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-amber-100 text-amber-700 border-amber-200">
-                          Pendente
-                        </span>
+                        {temAnexo ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-green-100 text-green-700 border-green-200">
+                            Anexado
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-amber-100 text-amber-700 border-amber-200">
+                            Pendente
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-slate-600 font-medium max-w-lg mt-0.5">
                         TERMO DE COMPROMISSO E RESPONSABILIDADE
@@ -278,18 +359,16 @@ export function MinhaRequisicao() {
                     </div>
                   </div>
 
-                  {/* BOTÕES SIMPLIFICADOS */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
                       onClick={() => {
-                        // Se não tiver o nome do responsável, abre o modal para preencher antes de baixar
                         if (requisicao.responsavelLegal?.nome) {
                           handleDownloadTermo(requisicao);
                         } else {
                           setShowModal(true);
                         }
                       }}
-                      className="px-4 py-2 bg-blue-50 text-blue-700 font-semibold text-sm rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5"
+                      className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-sm rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1.5"
                     >
                       <span className="material-symbols-outlined text-[18px]">
                         download
@@ -297,18 +376,42 @@ export function MinhaRequisicao() {
                       Baixar
                     </button>
 
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleUploadTermo}
+                    />
+
                     <button
-                      onClick={() =>
-                        alert("Em breve: Upload do documento assinado.")
-                      }
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingTermo}
                       className="px-4 py-2 bg-blue-50 text-blue-700 font-semibold text-sm rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5"
-                      title="Fazer upload do anexo assinado"
                     >
-                      <span className="material-symbols-outlined text-[18px]">
-                        upload_file
-                      </span>
-                      Enviar
+                      {uploadingTermo ? (
+                        <span className="material-symbols-outlined animate-spin text-[18px]">
+                          progress_activity
+                        </span>
+                      ) : (
+                        <span className="material-symbols-outlined text-[18px]">
+                          upload_file
+                        </span>
+                      )}
+                      {temAnexo ? "Reenviar" : "Enviar"}
                     </button>
+
+                    {temAnexo && (
+                      <button
+                        onClick={handleViewAnexoV}
+                        className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center justify-center"
+                        title="Visualizar documento anexado"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">
+                          visibility
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -317,10 +420,10 @@ export function MinhaRequisicao() {
             <div className="flex justify-end pt-4">
               <button
                 onClick={() => setShowConfirmSubmit(true)}
-                disabled={submitting || !podeEnviar}
+                disabled={submitting || !podeEnviar || !temAnexo}
                 className={`px-6 py-3 rounded-lg text-sm font-bold shadow-sm transition-all flex items-center gap-2 
                   ${
-                    podeEnviar
+                    podeEnviar && temAnexo
                       ? "bg-[#008060] text-white hover:bg-[#006048] hover:shadow-md"
                       : "bg-slate-200 text-slate-400 cursor-not-allowed"
                   }`}

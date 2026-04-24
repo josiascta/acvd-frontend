@@ -36,7 +36,9 @@ export function useViagemDetalhes(id?: string) {
           }).then((r) => (r.ok ? r.json() : null)),
         );
         const detalhadas = await Promise.all(detalhesPromises);
-        setRequisicoes(detalhadas.filter((d) => d !== null) as RequisicaoDetalhesDTO[]);
+        setRequisicoes(
+          detalhadas.filter((d) => d !== null) as RequisicaoDetalhesDTO[],
+        );
       }
     } catch (err) {
       console.error("Erro ao buscar alunos", err);
@@ -44,6 +46,12 @@ export function useViagemDetalhes(id?: string) {
       setLoading(false);
     }
   }, [id]);
+
+  const removeRequisicao = (idDaRequisicaoRemovida: string) => {
+    setRequisicoes((prev) =>
+      prev.filter((req) => req.requisicaoId !== idDaRequisicaoRemovida),
+    );
+  };
 
   useEffect(() => {
     fetchViagem();
@@ -56,5 +64,6 @@ export function useViagemDetalhes(id?: string) {
     loading,
     fetchViagem,
     fetchRequisicoes,
+    removeRequisicao,
   };
 }
