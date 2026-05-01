@@ -91,8 +91,10 @@ const [dadosTemp, setDadosTemp] = useState({ nome: '', contato: '' });
       return;
     }
 
-    // Monta a URL com os parâmetros do Modal, se existirem
-    let urlFetch = `http://localhost:8080/solicitacoes-coletivas/${viagemId}/termo-individual/${alunoId}`;
+    // URL CORRIGIDA PARA BATER COM O CONTROLLER
+    let urlFetch = `http://localhost:8080/api/pdf/termo-responsabilidade/coletiva/${viagemId}/aluno/${alunoId}`;
+    
+    // Adiciona os parâmetros de responsável se existirem
     if (manual?.nome) {
       urlFetch += `?nomeResp=${encodeURIComponent(manual.nome)}&contatoResp=${encodeURIComponent(manual.contato)}`;
     }
@@ -105,9 +107,10 @@ const [dadosTemp, setDadosTemp] = useState({ nome: '', contato: '' });
     });
 
     if (!response.ok) {
-      throw new Error("Erro ao gerar o PDF. Verifique se os dados do aluno e viagem estão completos.");
+      throw new Error("Erro ao gerar o PDF. Verifique os logs do servidor.");
     }
 
+    // Lógica do Blob para iniciar o download
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -122,15 +125,15 @@ const [dadosTemp, setDadosTemp] = useState({ nome: '', contato: '' });
     alert(error.message);
   }
 };
-const handleBotaoBaixar = (requisicao: any) => {
-  
-  if (!requisicao.responsavelLegal?.nome) {
+const handleBotaoBaixar = (requisicao: RequisicaoResumoDTO) => {
+  // Se NÃO existe o objeto responsavelLegal ou se o nome está vazio, abre o modal
+  if (!requisicao.responsavelLegal || !requisicao.responsavelLegal.nome) {
     setShowModal(true);
   } else {
+    // Se já tem responsável (caso dos menores que você já salvou), baixa direto
     handleDownloadTermo(requisicao);
   }
 };
-
 
 const confirmarESalvar = async () => {
   if (!dadosTemp.nome || !dadosTemp.contato) {

@@ -3,13 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useLocation } from "react-router-dom";
-<<<<<<< Updated upstream
-import { useAuth } from "../hooks/useAuth";
-import { useContaBancaria } from "../hooks/useContaBancaria";
-=======
+
 import { useContaBancaria } from "../hooks/useContaBancaria";
 import { useAuth } from "../hooks/useAuth";
->>>>>>> Stashed changes
 
 
 // --- Opções de Auxílio ---
@@ -58,12 +54,12 @@ export function SolicitacaoIndividual() {
 const [isSuccess, setIsSuccess] = useState(false);
   const token = localStorage.getItem("token");
   const [loading, setLoading] = useState<boolean>(false);
-  const { session } = useAuth();
+ 
  const { contaBancaria: dadosBancariosHook } = useContaBancaria();
 // ... dentro do componente SolicitacaoIndividual
 const location = useLocation(); // Aqui ela deixa de ser "unused"
  const { session } = useAuth();
- const { contaBancaria: dadosBancariosHook } = useContaBancaria();
+ 
 // Use o location.state para pegar os dados
 const dadosParaEdicao = location.state?.edicao;
   const {
@@ -138,35 +134,34 @@ const dadosParaEdicao = location.state?.edicao;
   carregarDados();
 }, [token, reset, dadosParaEdicao]);
 
-<<<<<<< Updated upstream
- const onSubmit = async (values: SolicitacaoFormData) => {
-  console.log("Valores que estão indo para o Java:", values);
-  setLoading(true);
-  try {
-    
-    let viagemId = dadosParaEdicao?.viagemId; // Tenta pegar o ID se for edição
-=======
+
 const onSubmit = async (values: SolicitacaoFormData) => {
   setLoading(true);
   try {
     let viagemId = dadosParaEdicao?.viagemId;
->>>>>>> Stashed changes
+
 
     // 1. CRIAÇÃO DA VIAGEM (Se não for edição)
-    if (!dadosParaEdicao) {
-      const viagemPayload = {
-        local: values.localidadeEvento,
-        dataPartida: values.dataPartida.split("T")[0],
-        dataRetorno: values.dataRetorno.split("T")[0],
-        prazoAnexosDiscentes: values.dataPartida.split("T")[0],
-        valorDiariaCnpq: 100.0,
-        tipoViagem: "INDIVIDUAL",
-        itinerarios: [{
-          local: values.localidadeEvento,
-          horarioSaida: values.dataPartida,
-          horarioEntrada: values.dataRetorno
-        }]
-      };
+      if (!dadosParaEdicao) {
+  const viagemPayload = {
+    // Campos da Viagem
+    dataPartida: values.dataPartida.split("T")[0], 
+    dataRetorno: values.dataRetorno.split("T")[0],
+    prazoAnexosDiscentes: values.dataPartida.split("T")[0],
+    valorDiariaCnpq: 100.0,
+    tipoViagem: "INDIVIDUAL",
+    
+    // Opcional conforme seu DTO, mas bom enviar se o Controller pedir
+    responsavelId: session?.userId, 
+
+    // O itinerário precisa de DESCRIÇÃO (que faltava) e LOCAL (que no Java é @NotEmpty)
+    itinerarios: [{
+      local: values.localidadeEvento,
+      descricao: `Participação no evento ${values.atividadeEvento || 'acadêmico'}`, // ADICIONE ISSO
+      horarioSaida: values.dataPartida.replace("Z", ""), // Limpa para o LocalDateTime do Java
+      horarioEntrada: values.dataRetorno.replace("Z", "")
+    }]
+  };
 
       const resViagem = await fetch("http://localhost:8080/viagens", {
         method: "POST",
@@ -190,19 +185,7 @@ const onSubmit = async (values: SolicitacaoFormData) => {
 
     // 3. MONTAGEM DO PAYLOAD (Alinhado com SolicitacaoIndividualDTO.java)
     const payloadSolicitacao = {
-<<<<<<< Updated upstream
-      ...values,
-      viagemId: viagemId, 
-      turmaPeriodo: values.turmaPeriodo, 
-      curso: values.curso,
-      campus: values.campus,// Usa o ID existente ou o novo
-      solicitadoEm: new Date().toISOString(),
-      
-      // Mapeamentos que já corrigimos...
-      afastamento: values.auxilios.includes("HOSPEDAGEM") 
-        ? "MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM" 
-        : "MAIOR_08_HORAS_ALIMENTACAO_E_LOCOMOCAO",
-=======
+
       viagemId: viagemId,
       justificativa: values.justificativa,
       solicitadoEm: new Date(), // Atende ao @NotNull e @PastOrPresent Date
@@ -232,7 +215,7 @@ const onSubmit = async (values: SolicitacaoFormData) => {
       conta: values.conta ||  "", 
 
       // Auxílios (Booleanos)
->>>>>>> Stashed changes
+
       solicitaInscricao: values.auxilios.includes("INSCRICAO"),
       solicitaPassagem: values.auxilios.includes("PASSAGEM"),
       solicitaHospedagem: values.auxilios.includes("HOSPEDAGEM"),
@@ -366,6 +349,20 @@ const onSubmit = async (values: SolicitacaoFormData) => {
               </div>
             </div>
           </div>
+          {/* Descrição da Atividade/Evento */}
+<div className="flex flex-col gap-2">
+  <label className="text-sm font-bold text-slate-700">
+    Descrição da Atividade (Evento)
+  </label>
+  <textarea
+    {...register("atividadeEvento")}
+    placeholder="Ex: Participação no III Congresso de Tecnologia do IFPB..."
+    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#008060] focus:border-transparent transition-all min-h-[80px]"
+  />
+  {errors.atividadeEvento && (
+    <span className="text-red-500 text-xs">{errors.atividadeEvento.message}</span>
+  )}
+</div>
 
           <div className="pt-4 flex justify-end gap-3">
             <button
