@@ -1,3 +1,12 @@
+type TipoAfastamento =
+  | "MENOR_04_HORAS"
+  | "MAIOR_04_HORAS"
+  | "MAIOR_08_HORAS"
+  | "MAIOR_08_HORAS_ALIMENTACAO_OU_LOCOMOCAO"
+  | "MAIOR_08_HORAS_ALIMENTACAO_E_LOCOMOCAO"
+  | "MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM"
+  | "MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM_E_LOCOMOCAO";
+
 type StatusRequisicao =
   | "AGUARDANDO_ENVIO"
   | "AGUARDANDO_ANALISE"
@@ -51,6 +60,8 @@ type RequisicaoDetalhesDTO = {
   motivoReprovacao?: string;
   valorDiaria: number;
   inscricaoValor: number;
+  tipoAfastamento: TipoAfastamento;
+  solicitaInscricao: boolean;
   discente: DiscenteInfoDTO;
   contaBancaria?: ContaInfoDTO;
   documentoDiscente?: DocumentoInfoDTO;
@@ -68,6 +79,8 @@ type RequisicaoResumoDTO = {
   motivoReprovacao?: string;
   valorDiaria: number;
   inscricaoValor: number;
+  tipoAfastamento: TipoAfastamento;
+  solicitaInscricao: boolean;
   responsavelLegal?: ResponsavelInfoDTO;
   termoResponsabilidade?: DocumentoInfoDTO;
 };

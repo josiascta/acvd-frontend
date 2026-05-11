@@ -47,7 +47,12 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
   const [addLoading, setAddLoading] = useState(false);
   const [submittingEval, setSubmittingEval] = useState(false);
 
-  const handleAddAlunoBase = async (emailsStr: string) => {
+  // MODIFICADO APENAS AQUI: Recebendo os novos parâmetros
+  const handleAddAlunoBase = async (
+    emailsStr: string,
+    tipoAfastamento: string,
+    inscricaoValor: number,
+  ) => {
     if (!id) return false;
     setAddLoading(true);
 
@@ -64,10 +69,11 @@ export function useViagemActions(id?: string, fetchRequisicoes?: () => void) {
 
     try {
       const promises = emails.map(async (email) => {
+        // MODIFICADO APENAS AQUI: Passando os parâmetros para o payload
         const payload = {
           emailDiscente: email,
-          valorDiaria: 0,
-          inscricaoValor: 0,
+          tipoAfastamento: tipoAfastamento,
+          inscricaoValor: inscricaoValor,
         };
         try {
           const res = await fetch(

@@ -242,9 +242,20 @@ export function MinhaRequisicao() {
             Voltar
           </button>
           <div className="flex justify-between items-center">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-              Minha Requisição
-            </h2>
+            <div>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+                Minha Requisição
+              </h2>
+              {requisicao && (
+                <p className="text-sm font-semibold text-slate-600 mt-1">
+                  Total a Receber Estimado: R${" "}
+                  {(
+                    (requisicao.valorDiaria || 0) +
+                    (requisicao.inscricaoValor || 0)
+                  ).toFixed(2)}
+                </p>
+              )}
+            </div>
 
             {requisicao && (
               <span
