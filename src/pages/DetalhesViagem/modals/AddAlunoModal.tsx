@@ -73,18 +73,19 @@ export function AddAlunoModal({
               <option value="MENOR_04_HORAS">
                 Até 4 horas (Sem ajuda de custo)
               </option>
-              <option value="MAIOR_04_HORAS">De 4 a 8 horas (10%)</option>
+              <option value="MAIOR_04_HORAS">De 4 a 8 horas</option>
+              <option value="MAIOR_08_HORAS">Maior que 8 horas</option>
               <option value="MAIOR_08_HORAS_ALIMENTACAO_OU_LOCOMOCAO">
-                Mais de 8h - Alim. OU Loc. (15%)
+                Mais de 8h - Alim. OU Loc. Urbana
               </option>
               <option value="MAIOR_08_HORAS_ALIMENTACAO_E_LOCOMOCAO">
-                Mais de 8h - Alim. E Loc. (25%)
+                Mais de 8h - Alim. E Loc. Urbana
               </option>
               <option value="MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM">
-                Mais de 8h - Alim. ou Loc. c/ Hospedagem (50%)
+                Mais de 8h - Alim. OU Loc. Urbana c/ Hospedagem
               </option>
               <option value="MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM_E_LOCOMOCAO">
-                Mais de 8h - Tudo (60%)
+                Mais de 8h - Tudo (Alim. E Loc. Urbana E Hospedagem)
               </option>
             </select>
           </div>
