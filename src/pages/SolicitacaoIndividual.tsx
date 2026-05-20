@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+
 import { useContaBancaria } from "../hooks/useContaBancaria";
+import { useAuth } from "../hooks/useAuth";
 
 
 // --- Opções de Auxílio ---
@@ -53,10 +54,12 @@ export function SolicitacaoIndividual() {
 const [isSuccess, setIsSuccess] = useState(false);
   const token = localStorage.getItem("token");
   const [loading, setLoading] = useState<boolean>(false);
+ 
+ const { contaBancaria: dadosBancariosHook } = useContaBancaria();
 // ... dentro do componente SolicitacaoIndividual
 const location = useLocation(); // Aqui ela deixa de ser "unused"
  const { session } = useAuth();
- const { contaBancaria: dadosBancariosHook } = useContaBancaria();
+ 
 // Use o location.state para pegar os dados
 const dadosParaEdicao = location.state?.edicao;
   const {
@@ -111,7 +114,7 @@ const dadosParaEdicao = location.state?.edicao;
             curso: data.curso,
             email: data.email,
             telefone: data.telefone,
-            endereco: "Endereço não cadastrado",
+            endereco: "Rua Exemplo, 123", // Placeholder, pois o endereço não vem do perfil
             campus: "Monteiro",
             turmaPeriodo: data.turmaPeriodo || session?.turmaPeriodo,
             banco: data.contaBancaria?.banco || "",
@@ -131,107 +134,148 @@ const dadosParaEdicao = location.state?.edicao;
   carregarDados();
 }, [token, reset, dadosParaEdicao]);
 
- const onSubmit = async (values: SolicitacaoFormData) => {
-  console.log("Valores que estão indo para o Java:", values);
+
+const onSubmit = async (values: SolicitacaoFormData) => {
   setLoading(true);
   try {
-    
-    let viagemId = dadosParaEdicao?.viagemId; // Tenta pegar o ID se for edição
+    let viagemId = dadosParaEdicao?.viagemId;
 
-    // 1. SÓ CRIA UMA VIAGEM NOVA SE NÃO FOR EDIÇÃO
-    if (!dadosParaEdicao) {
-      const viagemPayload = {
-        local: values.localidadeEvento,
-        dataPartida: values.dataPartida.split("T")[0],
-        dataRetorno: values.dataRetorno.split("T")[0],
-        prazoAnexosDiscentes: values.dataPartida.split("T")[0],
-        valorDiariaCnpq: 100.0,
-        tipoViagem: "INDIVIDUAL",
-        itinerarios: [
-          {
-            local: values.localidadeEvento,
-            horarioEntrada: values.dataPartida,
-            horarioSaida: values.dataRetorno
-          }
-        ]
-      };
+
+    // 1. CRIAÇÃO DA VIAGEM (Se não for edição)
+      if (!dadosParaEdicao) {
+  const viagemPayload = {
+    // Campos da Viagem
+    dataPartida: values.dataPartida.split("T")[0], 
+    dataRetorno: values.dataRetorno.split("T")[0],
+    prazoAnexosDiscentes: values.dataPartida.split("T")[0],
+    valorDiariaCnpq: 100.0,
+    tipoViagem: "INDIVIDUAL",
+    
+    // Opcional conforme seu DTO, mas bom enviar se o Controller pedir
+    responsavelId: session?.userId, 
+
+    // O itinerário precisa de DESCRIÇÃO (que faltava) e LOCAL (que no Java é @NotEmpty)
+    itinerarios: [{
+      local: values.localidadeEvento,
+      descricao: `Participação no evento ${values.atividadeEvento || 'acadêmico'}`, // ADICIONE ISSO
+      horarioSaida: values.dataPartida.replace("Z", ""), // Limpa para o LocalDateTime do Java
+      horarioEntrada: values.dataRetorno.replace("Z", "")
+    }]
+  };
 
       const resViagem = await fetch("http://localhost:8080/viagens", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          Authorization: `Bearer ${token}` 
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(viagemPayload),
       });
 
-      if (!resViagem.ok) throw new Error("Erro ao criar nova viagem");
-      
+      if (!resViagem.ok) throw new Error("Erro ao criar viagem");
       const viagemCriada = await resViagem.json();
-      viagemId = viagemCriada.id; // Pega o ID da nova viagem
+      viagemId = viagemCriada.id;
     }
 
-    // 2. SALVAR/ATUALIZAR A SOLICITAÇÃO
+    // 2. LÓGICA DE MAPEAMENTO PARA O ENUM TipoAfastamento
+    // Mapeia conforme as constantes exatas que você mandou do Back-end
+    let afastamentoEnum = "MAIOR_08_HORAS_ALIMENTACAO_E_LOCOMOCAO"; 
+    if (values.auxilios.includes("HOSPEDAGEM")) {
+      afastamentoEnum = values.auxilios.includes("LOCOMOCAO")
+        ? "MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM_E_LOCOMOCAO"
+        : "MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM";
+    }
+
+    // 3. MONTAGEM DO PAYLOAD (Alinhado com SolicitacaoIndividualDTO.java)
     const payloadSolicitacao = {
-      ...values,
-      viagemId: viagemId, 
-      turmaPeriodo: values.turmaPeriodo, 
-      curso: values.curso,
-      campus: values.campus,// Usa o ID existente ou o novo
-      solicitadoEm: new Date().toISOString(),
-      
-      // Mapeamentos que já corrigimos...
-      afastamento: values.auxilios.includes("HOSPEDAGEM") 
-        ? "MAIOR_08_HORAS_ALIMENTACAO_E_HOSPEDAGEM" 
-        : "MAIOR_08_HORAS_ALIMENTACAO_E_LOCOMOCAO",
+
+      viagemId: viagemId,
+      justificativa: values.justificativa,
+      solicitadoEm: new Date(), // Atende ao @NotNull e @PastOrPresent Date
+      data: new Date(),        // Atende ao campo 'Date data' do seu Record
+      afastamento: afastamentoEnum,
+
+      // Dados do Solicitante
+      nome: values.nome,
+      cpf: values.cpf,
+      matricula: values.matricula,
+      curso: values.curso || "Não informado",
+      email: values.email,
+      telefone: values.telefone || "",
+      endereco: values.endereco || "Não informado",
+
+      // Campos do Anexo V
+      campus: values.campus || "Monteiro",
+      turmaPeriodo: values.turmaPeriodo || "",
+      atividadeEvento: values.atividadeEvento || "Evento para o ifpb",
+      localidadeEvento: values.localidadeEvento,
+      nomeFamiliar: values.nomeFamiliar,
+      contatoFamiliar: values.contatoFamiliar,
+
+      // Dados Bancários (Campo 'conta' conforme o seu Record Java)
+      banco: values.banco || "",
+      agencia: values.agencia || "",
+      conta: values.conta ||  "", 
+
+      // Auxílios (Booleanos)
+
       solicitaInscricao: values.auxilios.includes("INSCRICAO"),
       solicitaPassagem: values.auxilios.includes("PASSAGEM"),
       solicitaHospedagem: values.auxilios.includes("HOSPEDAGEM"),
       solicitaLocomocao: values.auxilios.includes("LOCOMOCAO"),
       solicitaAlimentacao: values.auxilios.includes("ALIMENTACAO"),
+
+      // Período de Afastamento (Strings)
       dataSaida: values.dataPartida.split("T")[0],
       horaSaida: values.dataPartida.split("T")[1] || "00:00",
       dataChegada: values.dataRetorno.split("T")[0],
       horaChegada: values.dataRetorno.split("T")[1] || "00:00",
     };
 
-    const resDocs = await fetch("http://localhost:8080/solicitacoes-individuais/gerar-e-salvar", {
+    // 4. ENVIO PARA O BACK-END (SALVAR E GERAR ANEXO II)
+    const resSolicitacao = await fetch("http://localhost:8080/solicitacoes-individuais/gerar-e-salvar", {
       method: "POST",
-      headers: { 
-        "Content-Type": "application/json", 
-        Authorization: `Bearer ${token}` 
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payloadSolicitacao),
     });
 
-   if (resDocs.ok) {
-      setShowModal(true);
-      setIsSuccess(true);
-      
-      setTimeout(() => {
-        navigate("/");
-      }, 2500);
-    } else {
-      // TRATAMENTO DO ERRO AQUI
-      setIsSuccess(false); // Garante que não mostre o check verde
-      setShowModal(true);   // Abre o modal para mostrar o erro
-      
-      // Fecha o modal de erro automaticamente após 3 segundos para o usuário tentar corrigir o form
-      setTimeout(() => {
-        setShowModal(false);
-      }, 3000);
+    if (!resSolicitacao.ok) {
+      const errorData = await resSolicitacao.json();
+      console.error("DETALHES DO ERRO 500:");
+      console.table(errorData.errors || errorData); // Mostra os campos que falharam na validação
+      throw new Error("Erro na validação da solicitação");
     }
+
+    // 5. GERAÇÃO DO TERMO (ANEXO V) - Controller Separado
+    const resTermo = await fetch("http://localhost:8080/api/pdf/termo-responsabilidade/individual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payloadSolicitacao),
+    });
+
+    if (resTermo.ok) {
+      const blob = await resTermo.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Anexo_V_Termo_${values.matricula}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      setIsSuccess(true);
+      setShowModal(true);
+      setTimeout(() => navigate("/"), 2500);
+    } else {
+      throw new Error("Erro ao gerar o PDF do Termo (Anexo V)");
+    }
+
   } catch (error) {
-    console.error(error);
-    // Caso caia no catch (erro de rede, servidor desligado, etc)
+    console.error("Erro no processamento:", error);
     setIsSuccess(false);
     setShowModal(true);
-    setTimeout(() => setShowModal(false), 3000);
   } finally {
     setLoading(false);
   }
 };
-
   return (
     <div className="flex-grow w-full bg-[#f9fafb] min-h-[calc(100vh-64px)] pb-12">
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -305,6 +349,20 @@ const dadosParaEdicao = location.state?.edicao;
               </div>
             </div>
           </div>
+          {/* Descrição da Atividade/Evento */}
+<div className="flex flex-col gap-2">
+  <label className="text-sm font-bold text-slate-700">
+    Descrição da Atividade (Evento)
+  </label>
+  <textarea
+    {...register("atividadeEvento")}
+    placeholder="Ex: Participação no III Congresso de Tecnologia do IFPB..."
+    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#008060] focus:border-transparent transition-all min-h-[80px]"
+  />
+  {errors.atividadeEvento && (
+    <span className="text-red-500 text-xs">{errors.atividadeEvento.message}</span>
+  )}
+</div>
 
           <div className="pt-4 flex justify-end gap-3">
             <button

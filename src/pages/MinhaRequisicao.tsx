@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type Key } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { API_URL, getHeaders } from "../utils/api";
 import toast from "react-hot-toast";
@@ -15,13 +15,12 @@ export function MinhaRequisicao() {
   const [uploadingTermo, setUploadingTermo] = useState(false);
 
   // O estado principal que guarda os dados da requisição
-  const [requisicao, setRequisicao] = useState<RequisicaoResumoDTO | null>(
-    null,
-  );
+  const [requisicao, setRequisicao] = useState<any | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    
     const fetchMinhaRequisicao = async () => {
       try {
         const res = await fetch(`${API_URL}/requisicoes/minhas`, {
@@ -33,6 +32,7 @@ export function MinhaRequisicao() {
 
           if (reqEncontrada) {
             setRequisicao(reqEncontrada);
+            console.log(reqEncontrada)
           } else {
             console.error("Requisição não encontrada na lista do discente.");
           }
@@ -43,6 +43,8 @@ export function MinhaRequisicao() {
         setLoading(false);
       }
     };
+    
+
     fetchMinhaRequisicao();
   }, [id]);
 
@@ -63,7 +65,7 @@ export function MinhaRequisicao() {
         throw new Error(errData.message || "Erro ao enviar requisição.");
       }
 
-      setRequisicao((prev) =>
+      setRequisicao((prev: any) =>
         prev ? { ...prev, status: "AGUARDANDO_ANALISE" } : null,
       );
 
@@ -106,7 +108,7 @@ export function MinhaRequisicao() {
 
       const docData = await res.json();
 
-      setRequisicao((prev) =>
+      setRequisicao((prev: any) =>
         prev ? { ...prev, termoResponsabilidade: docData } : null,
       );
 
@@ -220,6 +222,24 @@ export function MinhaRequisicao() {
       handleDownloadTermo(requisicao, dadosTemp);
     }
   };
+  const ehMaiorDeIdade = () => {
+  const usuario = JSON.parse(localStorage.getItem("user") || "{}");
+
+  if (!usuario.dataNascimento) return false;
+
+  const nascimento = new Date(usuario.dataNascimento);
+  const hoje = new Date();
+
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+
+  const mes = hoje.getMonth() - nascimento.getMonth();
+
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--;
+  }
+
+  return idade >= 18;
+};
 
   const podeEnviar =
     requisicao?.status === "AGUARDANDO_ENVIO" ||
@@ -297,7 +317,7 @@ export function MinhaRequisicao() {
                   <ul className="list-disc list-inside text-sm text-red-700 space-y-1 ml-1 font-medium">
                     {requisicao.motivoReprovacao
                       .split(" | ")
-                      .map((motivo, idx) => (
+                      .map((motivo: string, idx: Key | null | undefined) => (
                         <li key={idx}>{motivo.trim()}</li>
                       ))}
                   </ul>
@@ -372,14 +392,14 @@ export function MinhaRequisicao() {
 
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
-                      onClick={() => {
-                        if (requisicao.responsavelLegal?.nome) {
-                          handleDownloadTermo(requisicao);
-                        } else {
+                  onClick={() => {
+                        if (ehMaiorDeIdade()) {
                           setShowModal(true);
+                        } else {
+                          handleDownloadTermo(requisicao);
                         }
                       }}
-                      className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-sm rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1.5"
+                        className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-sm rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1.5"
                     >
                       <span className="material-symbols-outlined text-[18px]">
                         download
